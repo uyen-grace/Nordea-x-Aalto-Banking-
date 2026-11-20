@@ -20,6 +20,7 @@ import { keepDocument, readDocument, deleteDocument, sweepExpired, KEEP_DAYS } f
 import { XLSX_MIME, csvText } from './fileText.js';
 import { runSelfTest } from './selftest.js';
 import { pipelineStorage, hydratePipeline } from './pipeline/store.js';
+import { ensureDerivedProfile } from './profileDerive.js';
 
 const fmt = (n: number, d = 0) =>
   Number(n).toLocaleString('fi-FI', { minimumFractionDigits: d, maximumFractionDigits: d }).replace(/−/g, '−') + ' €';
@@ -80,6 +81,8 @@ export function registerV14Routes(app: Express) {
     }
     const user = db.getUser(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
+    // About you starts with what Nordea already knows (salary, rent), so it's never empty.
+    try { ensureDerivedProfile(userId); } catch (e) { console.error('Could not fill About you from Nordea data:', e); }
     const entries = db.getCabinetEntries(userId);
     const goals = fin.activeGoals(userId).map((g) => fin.goalStatus(userId, g));
     const spentThisMonth = Object.values(fin.monthSpend(userId, fin.CUR_MONTH)).reduce((a, b) => a + b, 0);

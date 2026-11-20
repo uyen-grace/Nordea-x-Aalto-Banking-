@@ -97,7 +97,10 @@ export function offlineAnswer(userId: string, text: string, allowed: CabinetEntr
     if (raise && sal?.found && sal.changed && sal.difference > 0) {
       parts.push(`Nordea noticed your salary went up by ${eur(sal.difference)} a month, but your saving is still ${eur(plan.alreadySavingPerMonth)} a month. That raise is room to catch up.`);
     }
-    const used = [...goals.slice(0, 3).map((g) => g.id), ...(raise ? [raise.id] : [])];
+    // What they told us about themselves (About you) shapes the advice.
+    const safe = allowed.find((e) => (e.type === 'profile' && e.profileField === 'risk' && /safe/i.test(e.title)) || (e.type === 'preference' && /low-risk|safe/i.test(e.title)));
+    if (safe && offer) parts.push('Since you told me you want to keep your savings safe, I’d keep this in savings, not in funds.');
+    const used = [...goals.slice(0, 3).map((g) => g.id), ...(raise ? [raise.id] : []), ...(safe ? [safe.id] : [])];
     return {
       text: parts.join('\n\n') + (offer ? `\n\nWant to move ${eur(plan.suggestedExtraMove)} more each payday?` : ''),
       suggestions: offer ? [] : ['Plan my next payday', 'Where does my money go?'],

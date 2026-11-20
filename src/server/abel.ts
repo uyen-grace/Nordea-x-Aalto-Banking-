@@ -21,6 +21,7 @@ import { getProvider, ToolDecl, ToolCall, Turn, lastErrorText, recordTurn, isBus
 import { CabinetEntry, ChatMessage, MessageCard, UndoRecord } from '../types.js';
 import { originOf, ORIGIN_SAY } from '../entrySource.js';
 import { PROFILE_FIELDS, PROFILE_FIELD, isProfileField } from '../profileFields.js';
+import { aboutParagraph } from '../ui/profile.js';
 import { findSimilar, compare } from './similar.js';
 import { kvReplyIn, looksLikeCode } from './replyParse.js';
 import { offlineAnswer } from './abelOffline.js';
@@ -198,6 +199,9 @@ function systemPrompt(userId: string, helperId: string, cabinet: CabinetEntry[],
   return `You are Abel, the AI assistant inside the Nordea mobile banking app (a student concept with fictional data).
 Customer: ${u.name}, ${u.age}. Today is ${fin.DEMO_TODAY}. View: ${calm ? 'CALM (older or data-careful customer)' : 'full'}.
 This chat is with the helper: ${helperId}. Focus: ${HELPER_FOCUS[helperId] || HELPER_FOCUS.abel}
+
+ABOUT THE CUSTOMER (their "About you", only what they told you or confirmed; let it shape every answer, and say so when it matters, e.g. "since you want to keep your savings safe…"):
+${aboutParagraph(u.name, cabinet, u.age)}
 
 FACTS (computed by the bank's code just now; use these numbers directly, no tool call needed):
 ${JSON.stringify(facts)}

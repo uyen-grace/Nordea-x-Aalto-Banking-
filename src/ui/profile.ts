@@ -29,12 +29,15 @@ export const emptyFields = (entries: CabinetEntry[]): ProfileField[] =>
 
 /** About you as one short paragraph, like Claude's memory: "Lauri, 31, lives in Helsinki. Works full-time. …"
  *  Only what Abel may use: the customer's own answers and what they confirmed. */
-export function aboutParagraph(name: string, entries: CabinetEntry[]): string {
+export function aboutParagraph(name: string, entries: CabinetEntry[], age?: number): string {
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-  return PROFILE_FIELDS.map((f) => {
+  const parts = PROFILE_FIELDS.map((f) => {
     const e = profileEntryFor(entries, f.key);
     if (!e || isUnconfirmed(e)) return '';
     const t = e.title.trim().replace(/[.!]+$/, '');
     return f.key === 'basics' ? `${name}, ${t}.` : `${cap(t)}.`;
-  }).filter(Boolean).join(' ');
+  });
+  // No basics entry yet: start with what Nordea always knows - the name and age on the account.
+  if (!parts[0]) parts[0] = age ? `${name}, ${age}.` : `${name}.`;
+  return parts.filter(Boolean).join(' ');
 }

@@ -60,6 +60,7 @@ export default function App() {
   const [addGoalOpen, setAddGoalOpen] = useState(false);
   // "Get to know you": closed (null), all gaps ('all'), or one field.
   const [interview, setInterview] = useState<ProfileField | 'all' | null>(null);
+  const [aboutSavedAt, setAboutSavedAt] = useState<number | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   // The app ships with no data: until some is loaded (scripts/load_data.py) it shows "No data yet".
   const [noData, setNoData] = useState(false);
@@ -425,7 +426,14 @@ export default function App() {
                   entries={state.entries}
                   only={interview === 'all' ? undefined : interview}
                   onClose={() => setInterview(null)}
-                  onSaved={(m) => { setInterview(null); setToast({ message: m }); refresh(); }}
+                  onSaved={async (m) => {
+                    setInterview(null);
+                    setToast({ message: m });
+                    await refresh();
+                    // Show the result where it lives: About you, with the new paragraph lit up.
+                    if (page !== 'knows') { setPage('knows'); setChatOpen(false); }
+                    setAboutSavedAt(Date.now());
+                  }}
                 />
               )}
               <AddGoalModal
@@ -475,6 +483,7 @@ export default function App() {
               onArchive={archive}
               onKeep={(e) => update(e, { status: 'active', confirmedAt: new Date().toISOString() })}
               onInterview={() => setInterview('all')}
+              onAsk={(t) => startChat('abel', t)}
               onDecide={async (e, d) => { const r = await applyDecision(state.user.id, e, d); setToast({ message: r.message, undoToken: r.undoToken }); refresh(); }}
             />
           )}
@@ -494,6 +503,8 @@ export default function App() {
               onChanged={() => refresh()}
               onInterview={(f) => setInterview(f ?? 'all')}
               onToast={(message, undoToken) => setToast({ message, undoToken })}
+              aboutSavedAt={aboutSavedAt}
+              onAsk={(t) => startChat('abel', t)}
             />
           )}
           {page === 'privacy' && (

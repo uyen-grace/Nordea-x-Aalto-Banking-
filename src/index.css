@@ -865,3 +865,12 @@ span.cam-x{background:none}
 .iv .mrow.me .mcol{max-width:80%;flex:0 1 auto}
 .iv .bub{overflow-wrap:break-word;width:max-content;max-width:100%}
 .iv .mrow.me .bub{max-width:none}
+@keyframes about-lit{0%{background:var(--sel)}100%{background:transparent}}
+.about-flash{animation:about-lit 1.8s ease-out}
+.cab-filter{padding:2px 2px 0}
+.nrow2 .from{margin-top:2px}
+/* Tips: "Because you told us X -> here's Y" */
+.card.tip .from{align-self:flex-start}
+.card.tip .tip-ask{align-self:flex-start}
+.tip-link{align-self:flex-start;text-align:left;font-size:14.5px;font-weight:600;padding:4px 0;min-height:0;color:var(--brand-soft)}
+span.tip-link{color:var(--ink)}

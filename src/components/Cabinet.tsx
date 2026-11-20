@@ -7,8 +7,9 @@ import { eur, monthShort, n0 } from '../ui/format.js';
 import { BAND_BG, Band, RoundActions } from './Nordea.js';
 import { HistoryList, DocsSection } from './Pages.js';
 import { PROFILE_FIELDS, PROFILE_FIELD } from '../profileFields.js';
-import { profileEntryFor, isUnconfirmed, emptyFields, aboutParagraph } from '../ui/profile.js';
+import { profileEntryFor, isUnconfirmed, emptyFields, interviewFields, aboutParagraph } from '../ui/profile.js';
 import { originOf } from '../entrySource.js';
+import { tipsFor } from '../ui/personal.js';
 
 /**
  * What Abel knows: four parts, nothing else.
@@ -37,6 +38,10 @@ export interface KnowsProps {
   /** Open the About you interview (everything missing, or one field). */
   onInterview: (only?: ProfileField) => void;
   onToast?: (message: string, undoToken?: string) => void;
+  /** Changes right after the interview saved: About you scrolls into view and lights up briefly. */
+  aboutSavedAt?: number;
+  /** Ask Abel something straight away (the personalised cards). */
+  onAsk?: (text: string) => void;
 }
 
 /** Share / Keep private / Delete on one entry. Used here and on Home, so both behave the same. */
@@ -83,8 +88,11 @@ const Why: React.FC<{ e: CabinetEntry }> = ({ e }) => {
   );
 };
 
-/** The small coloured dot the app already uses: green = you, orange = Nordea. */
-const Dot: React.FC<{ e: CabinetEntry }> = ({ e }) => <span className={`dotc ${fromNordea(e) ? 'bank' : 'you'}`} />;
+/** Who added it, in the app's own label style (green dot = you, orange dot = Nordea). */
+const From: React.FC<{ e: CabinetEntry }> = ({ e }) => (
+  <span className={`from ${fromNordea(e) ? 'bank' : 'you'}`}>{fromNordea(e) ? 'Nordea noticed this' : 'You set this'}</span>
+);
+type Filter = 'all' | 'mine' | 'nordea';
 
 /** One row in Added by you / Added by Nordea. Tap to show Share / Keep private / Delete. */
 const Item: React.FC<{ e: CabinetEntry; apply: Apply }> = ({ e, apply }) => {
@@ -94,10 +102,11 @@ const Item: React.FC<{ e: CabinetEntry; apply: Apply }> = ({ e, apply }) => {
     <div className="nrow2 static wait">
       <span className="n-l">
         <button className="cab-row" aria-expanded={open} onClick={() => setOpen(!open)}>
-          <span className="n-name"><Dot e={e} />{e.title}{e.private && <Icon name="lock" size={14} className="cab-lock" />}</span>
+          <span className="n-name">{e.title}{e.private && <Icon name="lock" size={14} className="cab-lock" />}</span>
           <Chevron rotate={open ? -90 : 90} size={14} />
         </button>
         {e.detail && <span className={`n-sub${open ? '' : ' clamp1'}`}>{e.detail}</span>}
+        <From e={e} />
         <Why e={e} />
         {open && (
           <>
@@ -117,6 +126,9 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [oldOpen, setOldOpen] = useState(false);
   const [goalOpen, setGoalOpen] = useState<string | null>(null);
+  const [filter, setFilter] = useState<Filter>('all');
+  const showMine = filter !== 'nordea';
+  const showNordea = filter !== 'mine';
 
   // Inputs from glasses / WhatsApp / documents, and cards waiting for approval, also wait here.
   const [pipe, setPipe] = useState<PipeItem[]>([]);
@@ -145,8 +157,18 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
   const nordea = live.filter((e) => fromNordea(e) && e.reviewed && e.type !== 'profile' && e.status === 'active');
   const old = state.entries.filter((e) => e.status === 'archived' || e.status === 'disputed');
   // About you
-  const paragraph = aboutParagraph(name, state.entries);
+  const paragraph = aboutParagraph(name, state.entries, state.user.age);
   const missing = emptyFields(state.entries).length;
+  const questions = interviewFields(state.entries).length;
+  const aboutRef = React.useRef<HTMLDivElement>(null);
+  const [flash, setFlash] = useState(false);
+  useEffect(() => {
+    if (!p.aboutSavedAt) return;
+    aboutRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    setFlash(true);
+    const t = window.setTimeout(() => setFlash(false), 1800);
+    return () => window.clearTimeout(t);
+  }, [p.aboutSavedAt]);
 
   const inUse = state.readable.abel;
   const notShared = Math.max(0, live.length - inUse - guesses.length);
@@ -171,15 +193,38 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
         ]} />
       </header>
       <div className="nbody">
+        <div className="chips cab-filter" role="group" aria-label="Show">
+          {([['all', 'All'], ['mine', 'Mine'], ['nordea', 'From Nordea']] as [Filter, string][]).map(([k, label]) => (
+            <button key={k} className={`chip${filter === k ? ' on' : ''}`} aria-pressed={filter === k} onClick={() => setFilter(k)}>{label}</button>
+          ))}
+        </div>
         {/* ---------- About you ---------- */}
         <Band left="About you" right={<button className="btn link band-act" onClick={() => setAboutOpen(!aboutOpen)}>{aboutOpen ? 'Less' : 'Details'}</button>} />
-        <div className="ncard flat">
-          <div className="nrow2 static">
+        <div className="ncard flat" ref={aboutRef}>
+          <div className={`nrow2 static${flash ? ' about-flash' : ''}`}>
             <span className="n-l">
-              <span className="about-p">{paragraph || 'Nothing yet.'}</span>
-              {missing > 0 && <span className="wait-act"><button className="btn small primary" onClick={() => p.onInterview()}>Add more</button></span>}
+              <span className="about-p">{paragraph}</span>
             </span>
           </div>
+          {tipsFor(state).length > 0 && (
+            <div className="nrow2 static">
+              <span className="n-l">
+                <span className="n-sub">Because of this, Abel suggests</span>
+                {tipsFor(state).map((t) => (t.ask
+                  ? <button key={t.id} className="btn link tip-link" onClick={() => p.onAsk?.(t.ask!.text)}>→ {t.title}</button>
+                  : <span key={t.id} className="tip-link">→ {t.title}</span>))}
+              </span>
+            </div>
+          )}
+          {questions > 0 && (
+            <div className="nrow2 static">
+              <span className="n-l">
+                <span className="n-name">Tell Abel about you</span>
+                <span className="n-sub">{questions} quick {questions === 1 ? 'question' : 'questions'}. You check each answer.</span>
+              </span>
+              <button className="btn small primary" onClick={() => p.onInterview()}>Start</button>
+            </div>
+          )}
           {aboutOpen && PROFILE_FIELDS.map((f) => {
             const e = profileEntryFor(state.entries, f.key);
             const shown = e && !isUnconfirmed(e) ? e : undefined;
@@ -187,7 +232,8 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
               <div className="nrow2 static" key={f.key}>
                 <span className="n-l">
                   <span className="n-sub">{f.label}</span>
-                  <span className="n-name">{shown && <Dot e={shown} />}{shown ? shown.title : <span className="cab-unset">Not set</span>}</span>
+                  <span className="n-name">{shown ? shown.title : <span className="cab-unset">Not set</span>}</span>
+                  {shown && <From e={shown} />}
                 </span>
                 {f.question && <button className="btn link" onClick={() => p.onInterview(f.key)}>{shown ? 'Edit' : 'Add'}</button>}
               </div>
@@ -199,36 +245,36 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
         <Band left="Waiting for you" right={waitingCount ? <span className="band-note">{waitingCount}</span> : undefined} />
         <div className="ncard flat">
           {waitingCount === 0 && <div className="nrow2 static"><span className="n-l"><span className="n-sub">All checked ✓</span></span></div>}
-          {guesses.map((e) => (
+          {showNordea && guesses.map((e) => (
             <div className="nrow2 static wait" key={e.id}>
               <span className="n-l">
-                <span className="n-name"><Dot e={e} />{e.type === 'profile' && e.profileField ? `${PROFILE_FIELD[e.profileField].label}: ${e.title}` : e.title}</span>
+                <span className="n-name">{e.type === 'profile' && e.profileField ? `${PROFILE_FIELD[e.profileField].label}: ${e.title}` : e.title}</span>
                 {e.detail && <span className="n-sub">{e.detail}</span>}
-                <span className="n-sub"><span className="src-chip">Nordea noticed</span></span>
+                <From e={e} />
                 <Why e={e} />
                 <Decide onPick={(d) => apply(e, d)} label={e.title} />
               </span>
             </div>
           ))}
-          {stale.map((e) => (
+          {showMine && stale.map((e) => (
             <div className="nrow2 static wait" key={e.id}>
               <span className="n-l">
-                <span className="n-name"><Dot e={e} />Still saving for “{e.title}”?</span>
-                <span className="n-sub"><span className="src-chip">Your old goal</span></span>
+                <span className="n-name">Still saving for “{e.title}”?</span>
+                <From e={e} />
                 <Decide options={['keep', 'delete']} onPick={(d) => apply(e, d)} label={e.title} />
               </span>
             </div>
           ))}
-          {pipe.map((c) => (
+          {showMine && pipe.map((c) => (
             <div className="nrow2 static wait" key={c.id}>
               <span className="n-l">
-                <span className="n-name"><span className="dotc you" />{c.title}</span>
-                <span className="n-sub"><span className="src-chip">{SOURCE_NAME[c.source]}</span></span>
+                <span className="n-name">{c.title}</span>
+                <span className="from you">You set this · {SOURCE_NAME[c.source]}</span>
                 <Decide current={c.filter === 'private' ? 'private' : undefined} onPick={(d) => decidePipe(c.id, d === 'share' ? 'save' : d === 'private' ? 'private' : 'drop')} label={c.title} />
               </span>
             </div>
           ))}
-          {approvals.map((c) => (
+          {showMine && approvals.map((c) => (
             <div className="nrow2 static wait" key={c.id}>
               <span className="n-l">
                 <span className="n-name">{c.summary}</span>
@@ -240,6 +286,7 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
         </div>
 
         {/* ---------- Added by you ---------- */}
+        {showMine && <>
         <Band left="Added by you" right={<button className="btn link band-act" onClick={p.onAddGoal}>+ Add</button>} />
         <div className="ncard flat">
           {state.goals.length + mine.length === 0 && <div className="nrow2 static"><span className="n-l"><span className="n-sub">Nothing yet. Add a goal or tell Abel.</span></span></div>}
@@ -265,13 +312,16 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
           ))}
           {mine.map((e) => <Item key={e.id} e={e} apply={apply} />)}
         </div>
+        </>}
 
         {/* ---------- Added by Nordea ---------- */}
+        {showNordea && <>
         <Band left="Added by Nordea" />
         <div className="ncard flat">
-          {nordea.length === 0 && <div className="nrow2 static"><span className="n-l"><span className="n-sub">Nothing yet.</span></span></div>}
+          {nordea.length === 0 && <div className="nrow2 static"><span className="n-l"><span className="n-sub">Nothing yet. Say yes to something in Waiting for you.</span></span></div>}
           {nordea.map((e) => <Item key={e.id} e={e} apply={apply} />)}
         </div>
+        </>}
 
         {/* Deleted (archived or marked wrong): out of the way, can be restored. */}
         {old.length > 0 && (
@@ -279,9 +329,9 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
             <Band left="Deleted" right={<button className="btn link band-act" onClick={() => setOldOpen(!oldOpen)}>{oldOpen ? 'Hide' : `Show ${old.length}`}</button>} />
             {oldOpen && (
               <div className="ncard flat">
-                {old.map((e) => (
+                {old.filter((e) => (fromNordea(e) ? showNordea : showMine)).map((e) => (
                   <div className="nrow2 static" key={e.id}>
-                    <span className="n-l"><span className="n-name"><Dot e={e} />{e.title}</span></span>
+                    <span className="n-l"><span className="n-name">{e.title}</span><From e={e} /></span>
                     <button className="btn small" onClick={() => p.onUpdate(e, { status: 'active' })}>Restore</button>
                   </div>
                 ))}

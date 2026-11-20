@@ -8,6 +8,7 @@ import { LOGO_WHITE } from '../constants/logos.js';
 import { BAND_BG, RoundActions, NRow, Band, NChev } from './Nordea.js';
 import { Decide, Decision } from '../ui/Decide.js';
 import { interviewFields } from '../ui/profile.js';
+import { tipsFor } from '../ui/personal.js';
 
 interface Props {
   state: AppState;
@@ -26,6 +27,8 @@ interface Props {
   onInterview: () => void;
   /** Share / Keep private / Delete (or Keep / Delete for an old goal), same as in What Abel knows. */
   onDecide: (e: CabinetEntry, d: Decision) => void;
+  /** Ask Abel straight away (from a tip card). */
+  onAsk: (text: string) => void;
 }
 
 /** Things Nordea noticed that wait for the customer, and old goals that look out of date. */
@@ -146,6 +149,23 @@ export const HomePage: React.FC<Props> = (p) => {
             <span className="t"><b>Help Abel get to know you</b><span>{interviewFields(state.entries).length} quick questions</span></span>
             <button className="btn small primary" onClick={p.onInterview}>Start</button>
           </div>
+        )}
+
+        {/* Because you told us X -> here's Y: what filling in What Abel knows gives you. */}
+        {tipsFor(state).length > 0 && (
+          <>
+            <Band left="For you" right="From what Abel knows" />
+            {tipsFor(state).map((t) => (
+              <div className="card tip" key={t.id}>
+                <span className={`from ${t.from}`}>{t.because}</span>
+                <div>
+                  <h3>{t.title}</h3>
+                  <p>{t.body}</p>
+                </div>
+                {t.ask && <button className="btn small primary tip-ask" onClick={() => p.onAsk(t.ask!.text)}>{t.ask.label}</button>}
+              </div>
+            ))}
+          </>
         )}
 
         {feed.length > 0 && (
