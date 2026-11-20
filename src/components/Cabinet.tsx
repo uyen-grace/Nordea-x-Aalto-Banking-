@@ -198,22 +198,23 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
           ))}
         </div>
         {/* ---------- About you ---------- */}
-        <Band left="About you" right={<button className="btn link band-act" onClick={() => setAboutOpen(!aboutOpen)}>{aboutOpen ? 'Less' : 'Details'}</button>} />
+        <Band left="About you" />
         <div className="ncard flat" ref={aboutRef}>
           <div className={`nrow2 static${flash ? ' about-flash' : ''}`}>
             <span className="n-l">
               <span className="about-p">{paragraph}</span>
             </span>
           </div>
-          {questions > 0 && (
-            <div className="nrow2 static">
-              <span className="n-l">
-                <span className="n-name">Tell Abel about you</span>
-                <span className="n-sub">{questions} quick {questions === 1 ? 'question' : 'questions'}. You check each answer.</span>
-              </span>
-              <button className="btn small primary" onClick={() => p.onInterview()}>Start</button>
-            </div>
-          )}
+          <div className="nrow2 static">
+            <span className="wait-act about-btns">
+              <button className="btn small primary" onClick={() => p.onInterview()}>
+                <Icon name="plus" size={16} />{questions > 0 ? `Add more · ${questions} quick ${questions === 1 ? 'question' : 'questions'}` : 'Add more'}
+              </button>
+              <button className="btn small" aria-expanded={aboutOpen} onClick={() => setAboutOpen(!aboutOpen)}>
+                {aboutOpen ? 'Done' : 'Edit'}
+              </button>
+            </span>
+          </div>
           {aboutOpen && PROFILE_FIELDS.map((f) => {
             const e = profileEntryFor(state.entries, f.key);
             const shown = e && !isUnconfirmed(e) ? e : undefined;
@@ -221,10 +222,27 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
               <div className="nrow2 static" key={f.key}>
                 <span className="n-l">
                   <span className="n-sub">{f.label}</span>
-                  <span className="n-name">{shown ? shown.title : <span className="cab-unset">Not set</span>}</span>
-                  {shown && <From e={shown} />}
+                  {shown ? (
+                    <>
+                      <span className="n-name">{shown.title}</span>
+                      <From e={shown} />
+                    </>
+                  ) : f.key === 'basics' && state.user.age ? (
+                    // Nordea always knows the age on the account.
+                    <>
+                      <span className="n-name">{state.user.age} years old</span>
+                      <span className="from bank">Nordea noticed this</span>
+                    </>
+                  ) : (
+                    <span className="n-name"><span className="cab-unset">Not set</span></span>
+                  )}
                 </span>
-                {f.question && <button className="btn link" onClick={() => p.onInterview(f.key)}>{shown ? 'Edit' : 'Add'}</button>}
+                {f.question && (
+                  <span className="about-row-act">
+                    <button className="btn link" onClick={() => p.onInterview(f.key)}>{shown ? 'Change' : 'Add'}</button>
+                    {shown && <button className="btn link quiet-link" onClick={() => apply(shown, 'delete')}>Delete</button>}
+                  </span>
+                )}
               </div>
             );
           })}

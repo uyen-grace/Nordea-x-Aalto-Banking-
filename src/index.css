@@ -879,3 +879,7 @@ span.tip-link{color:var(--ink)}
 .tip-line{display:flex;flex-direction:column;gap:2px}
 .tip-line b{font-weight:600}
 .tip-line .from{font-size:12px}
+.about-btns{margin-top:0}
+.about-btns .btn svg{margin-right:2px}
+.about-row-act{display:flex;gap:14px;align-items:center}
+.quiet-link{color:var(--muted)!important}

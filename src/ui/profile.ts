@@ -17,7 +17,7 @@ export const isUnconfirmed = (e?: CabinetEntry) => !!e && originOf(e) !== 'you' 
 /** What the onboarding interview should ask about, most useful first, at most `max`:
  *  empty fields first, then Nordea's guesses that still need a yes or a correction. */
 export function interviewFields(entries: CabinetEntry[], max = 5): ProfileField[] {
-  const askable = PROFILE_FIELDS.filter((f) => f.question);
+  const askable = PROFILE_FIELDS.filter((f) => f.question && !f.optional);
   const empty = askable.filter((f) => !profileEntryFor(entries, f.key)).map((f) => f.key);
   const toConfirm = askable.filter((f) => isUnconfirmed(profileEntryFor(entries, f.key))).map((f) => f.key);
   return [...empty, ...toConfirm].slice(0, max);
@@ -25,7 +25,7 @@ export function interviewFields(entries: CabinetEntry[], max = 5): ProfileField[
 
 /** Fields nobody has filled yet (Nordea's unconfirmed guesses don't count as empty: they wait for a yes). */
 export const emptyFields = (entries: CabinetEntry[]): ProfileField[] =>
-  PROFILE_FIELDS.filter((f) => f.question && !profileEntryFor(entries, f.key)).map((f) => f.key);
+  PROFILE_FIELDS.filter((f) => f.question && !f.optional && !profileEntryFor(entries, f.key)).map((f) => f.key);
 
 /** About you as one short paragraph, like Claude's memory: "Lauri, 31, lives in Helsinki. Works full-time. …"
  *  Only what Abel may use: the customer's own answers and what they confirmed. */
@@ -43,5 +43,5 @@ export function aboutParagraph(name: string, entries: CabinetEntry[], age?: numb
   };
   // No basics entry yet: start with what Nordea always knows - the name and age on the account.
   const first = val('basics') ? `${name}, ${val('basics')}.` : age ? `${name}, ${age}.` : `${name}.`;
-  return [first, sentence('life_situation', 'income'), sentence('household', 'housing'), sentence('ambition', 'risk')].filter(Boolean).join(' ');
+  return [first, sentence('life_situation', 'income'), sentence('household', 'housing'), sentence('ambition', 'risk'), sentence('more')].filter(Boolean).join(' ');
 }

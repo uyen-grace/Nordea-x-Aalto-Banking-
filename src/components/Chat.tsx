@@ -5,7 +5,7 @@ import { eur, eurP, dayMonth, monthShort } from '../ui/format.js';
 import { HELPERS } from '../ui/helpers.js';
 import { Choice } from '../ui/Choice.js';
 import { originOf } from '../entrySource.js';
-import type { Tip } from '../ui/personal.js';
+import { openingMessage, type Tip } from '../ui/personal.js';
 import { documentUrl } from '../services/api.js';
 import type { ImportBody, DocInfo } from '../services/api.js';
 
@@ -423,22 +423,10 @@ export const Chat: React.FC<Props> = (p) => {
   const items: Item[] = [];
   const [g1, g2] = h.greet(p.userName);
   // A new chat with Abel starts from what he knows about you: a short list of what he'd look at first.
-  const tips = p.helperId === 'abel' ? (p.tips || []).slice(0, 3) : [];
+  const tips = p.helperId === 'abel' ? (p.tips || []).slice(0, 4) : [];
   if (tips.length) {
-    items.push(
-      { who: 'bot', key: 'g1' + p.helperId, node: g1 },
-      { who: 'bot', key: 'gt' + p.helperId, node: (
-        <span className="tip-open">
-          From what I know about you, I’d look at:
-          {tips.map((t) => (
-            <span className="tip-line" key={t.id}>
-              <b>{t.title}</b>
-              <span className={`from ${t.from}`}>{t.because}</span>
-            </span>
-          ))}
-        </span>
-      ) },
-    );
+    // In Abel's own words: "You told me … Nordea also noticed … So I'd suggest …"
+    items.push({ who: 'bot', key: 'gt' + p.helperId, node: keepNumbers(openingMessage(p.userName, tips)) });
   } else {
     items.push({ who: 'bot', key: 'g1' + p.helperId, node: g1 }, { who: 'bot', key: 'g2' + p.helperId, node: g2 });
   }

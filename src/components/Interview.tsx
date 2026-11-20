@@ -46,7 +46,8 @@ export const Interview: React.FC<{
   onClose: () => void;
   onSaved: (message: string) => void;
 }> = ({ userId, userName, entries, only, onClose, onSaved }) => {
-  const [fields] = useState<ProfileField[]>(() => (only ? [only] : interviewFields(entries)));
+  // Missing answers first, then always the open question "Anything else?" (skip is fine).
+  const [fields] = useState<ProfileField[]>(() => (only ? [only] : [...interviewFields(entries), 'more']));
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [typed, setTyped] = useState('');
@@ -138,7 +139,7 @@ export const Interview: React.FC<{
                     ))}
                   </div>
                   <form className="iv-type" onSubmit={(e) => { e.preventDefault(); answer(typed); }}>
-                    <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="Or type" aria-label="Your answer" maxLength={80} />
+                    <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={def.options ? 'Or type' : 'For example: I’m starting a master’s in autumn'} aria-label="Your answer" maxLength={120} />
                     <button className="btn small primary" type="submit" disabled={!typed.trim()}>Send</button>
                   </form>
                   <button className="btn link iv-skip" onClick={skip}>Skip</button>

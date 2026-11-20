@@ -32,7 +32,7 @@ export interface User {
 
 export type CabinetEntryType = 'goal' | 'life_event' | 'preference' | 'fact' | 'observation' | 'blind_spot' | 'profile';
 /** The "About you" profile: one entry per field (see src/profileFields.ts). */
-export type ProfileField = 'basics' | 'life_situation' | 'household' | 'housing' | 'income' | 'ambition' | 'risk';
+export type ProfileField = 'basics' | 'life_situation' | 'household' | 'housing' | 'income' | 'ambition' | 'risk' | 'more';
 export type CabinetEntrySource = 'customer' | 'nordea' | 'document';
 export type CabinetEntryStatus = 'active' | 'stale' | 'archived' | 'disputed';
 

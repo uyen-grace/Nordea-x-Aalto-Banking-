@@ -16,6 +16,8 @@ export interface ProfileFieldDef {
   question?: string;
   /** Quick answers to tap: what the button says -> the phrase that is saved. */
   options?: [label: string, phrase: string][];
+  /** Never counted as missing (free text the customer adds only if they want to). */
+  optional?: boolean;
 }
 
 export const PROFILE_FIELDS: ProfileFieldDef[] = [
@@ -44,6 +46,7 @@ export const PROFILE_FIELDS: ProfileFieldDef[] = [
     key: 'risk', label: 'Risk', question: 'How much risk with savings?',
     options: [['Keep it safe', 'Keeps savings safe'], ['A little', 'OK with a little risk'], ['I’m fine with risk', 'Comfortable with risk']],
   },
+  { key: 'more', label: 'Anything else', question: 'Anything else Abel should know about you?', optional: true },
 ];
 
 export const PROFILE_FIELD = Object.fromEntries(PROFILE_FIELDS.map((f) => [f.key, f])) as Record<ProfileField, ProfileFieldDef>;
