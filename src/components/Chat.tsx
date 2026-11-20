@@ -4,7 +4,6 @@ import { Icon, BotAvatar, Chevron } from '../ui/icons.js';
 import { eur, eurP, dayMonth, monthShort } from '../ui/format.js';
 import { HELPERS } from '../ui/helpers.js';
 import { Choice } from '../ui/Choice.js';
-import { SourceBadge } from '../ui/Source.js';
 import { originOf } from '../entrySource.js';
 import { documentUrl } from '../services/api.js';
 import type { ImportBody, DocInfo } from '../services/api.js';
@@ -242,7 +241,7 @@ export const Chat: React.FC<Props> = (p) => {
     return (
       <>
         <button className="used-l" onClick={() => setUsedOpen(open ? null : m.id)} aria-expanded={open}>
-          <span className="ud">{es.slice(0, 3).map((e) => <i key={e.id} className={originOf(e) === 'register' ? 'reg' : originOf(e) === 'nordea' ? 'bank' : 'you'} />)}</span>
+          <span className="ud">{es.slice(0, 3).map((e) => <i key={e.id} className={originOf(e) === 'nordea' || originOf(e) === 'register' ? 'bank' : 'you'} />)}</span>
           {label}
           <Chevron rotate={open ? -90 : 90} size={14} />
         </button>
@@ -256,7 +255,8 @@ export const Chat: React.FC<Props> = (p) => {
             {es.length > 0 && <p className="used-note"><b>Abel says it used:</b> (its own report, not a proof)</p>}
             {es.map((e) => (
               <div className="used-i" key={e.id}>
-                <span className="used-t"><b>{e.title}</b><SourceBadge e={e} label={originOf(e) === 'nordea' ? 'Nordea noticed this · you confirmed' : originOf(e) === 'register' ? 'From a public register · you confirmed' : undefined} /></span>
+                <span className={`dotc ${originOf(e) === 'nordea' || originOf(e) === 'register' ? 'bank' : 'you'}`} />
+                <span className="used-t"><b>{e.title}</b><span>{originOf(e) === 'nordea' ? 'Nordea noticed · you confirmed' : originOf(e) === 'register' ? 'From the population register' : originOf(e) === 'document' ? 'From a document you imported' : 'You told Abel'}</span></span>
                 <button className="btn link" onClick={() => p.onEditEntry(e.id)}>Edit</button>
               </div>
             ))}

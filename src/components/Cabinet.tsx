@@ -4,9 +4,8 @@ import { Decide, Decision } from '../ui/Decide.js';
 import { CabinetEntry, ProfileField } from '../types.js';
 import { Icon, Chevron } from '../ui/icons.js';
 import { eur, monthShort, n0 } from '../ui/format.js';
-import { BAND_BG } from './Nordea.js';
+import { BAND_BG, Band, RoundActions } from './Nordea.js';
 import { HistoryList, DocsSection } from './Pages.js';
-import { Choice } from '../ui/Choice.js';
 import { PROFILE_FIELDS, PROFILE_FIELD } from '../profileFields.js';
 import { profileEntryFor, isUnconfirmed, emptyFields, aboutParagraph } from '../ui/profile.js';
 import { originOf } from '../entrySource.js';
@@ -69,15 +68,6 @@ type Apply = (e: CabinetEntry, d: Decision) => void;
 const currentOf = (e: CabinetEntry): Decision => (e.private ? 'private' : 'share');
 
 const fromNordea = (e: CabinetEntry) => originOf(e) === 'nordea' || originOf(e) === 'register';
-const SHORT_ORIGIN = { you: 'You', document: 'You', nordea: 'Nordea', register: 'Register', hidden: '' } as const;
-
-/** A section heading: title, optional count, optional action on the right. */
-const Head: React.FC<{ title: string; count?: number; action?: React.ReactNode }> = ({ title, count, action }) => (
-  <div className="cab-h">
-    <h2>{title}{count ? <span className="cab-n">{count}</span> : null}</h2>
-    {action}
-  </div>
-);
 
 /** "Why Nordea noticed this" - closed until tapped. */
 const Why: React.FC<{ e: CabinetEntry }> = ({ e }) => {
@@ -85,35 +75,38 @@ const Why: React.FC<{ e: CabinetEntry }> = ({ e }) => {
   if (!e.why || !fromNordea(e)) return null;
   return (
     <>
-      <button className="cab-why" aria-expanded={open} onClick={(ev) => { ev.stopPropagation(); setOpen(!open); }}>
+      <button className="btn link cab-why" aria-expanded={open} onClick={(ev) => { ev.stopPropagation(); setOpen(!open); }}>
         Why Nordea noticed this <Chevron rotate={open ? -90 : 90} size={13} />
       </button>
-      {open && <p className="cab-why-t">{e.why}</p>}
+      {open && <span className="n-sub">{e.why}</span>}
     </>
   );
 };
 
-/** One item in Added by you / Added by Nordea. Tap to show its actions. */
+/** The small coloured dot the app already uses: green = you, orange = Nordea. */
+const Dot: React.FC<{ e: CabinetEntry }> = ({ e }) => <span className={`dotc ${fromNordea(e) ? 'bank' : 'you'}`} />;
+
+/** One row in Added by you / Added by Nordea. Tap to show Share / Keep private / Delete. */
 const Item: React.FC<{ e: CabinetEntry; apply: Apply }> = ({ e, apply }) => {
   const [open, setOpen] = useState(false);
   const [hist, setHist] = useState(false);
   return (
-    <div className={`cab-item${open ? ' open' : ''}`}>
-      <button className="cab-row" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <span className="cab-t">
-          <b>{e.title}{e.private && <Icon name="lock" size={13} className="cab-lock" />}</b>
-          {e.detail && <span className={open ? '' : 'clamp1'}>{e.detail}</span>}
-        </span>
-        <Chevron rotate={open ? -90 : 90} size={14} />
-      </button>
-      <Why e={e} />
-      {open && (
-        <div className="cab-act">
-          <Decide current={currentOf(e)} onPick={(d) => apply(e, d)} label={e.title} />
-          <button className="cab-more" aria-expanded={hist} onClick={() => setHist(!hist)}>{hist ? 'Hide history' : 'History'}</button>
-          {hist && <HistoryList userId={e.userId} entryId={e.id} />}
-        </div>
-      )}
+    <div className="nrow2 static wait">
+      <span className="n-l">
+        <button className="cab-row" aria-expanded={open} onClick={() => setOpen(!open)}>
+          <span className="n-name"><Dot e={e} />{e.title}{e.private && <Icon name="lock" size={14} className="cab-lock" />}</span>
+          <Chevron rotate={open ? -90 : 90} size={14} />
+        </button>
+        {e.detail && <span className={`n-sub${open ? '' : ' clamp1'}`}>{e.detail}</span>}
+        <Why e={e} />
+        {open && (
+          <>
+            <Decide current={currentOf(e)} onPick={(d) => apply(e, d)} label={e.title} />
+            <button className="btn link cab-why" aria-expanded={hist} onClick={() => setHist(!hist)}>{hist ? 'Hide history' : 'History'}</button>
+            {hist && <HistoryList userId={e.userId} entryId={e.id} />}
+          </>
+        )}
+      </span>
     </div>
   );
 };
@@ -155,131 +148,146 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
   const paragraph = aboutParagraph(name, state.entries);
   const missing = emptyFields(state.entries).length;
 
+  const inUse = state.readable.abel;
+  const notShared = Math.max(0, live.length - inUse - guesses.length);
+
   return (
     <>
       <header className="nhead detail kn-head" style={{ backgroundImage: BAND_BG }}>
         <div className="dh-top">
           <span className="dh-back" />
           <b>What Abel knows</b>
-          <button className="dh-side" onClick={p.onPrivacy}><Icon name="shield" />Privacy</button>
+          <button className="dh-side" onClick={p.onPrivacy}><Icon name="shield" />Who sees it</button>
         </div>
-        <p className="kn-sub">Share: Nordea can use it · Keep private: only Abel</p>
+        <div className="kn-sum">
+          <div><b>{inUse}</b><span>In use</span></div>
+          <div className={waitingCount ? 'hl' : ''}><b>{waitingCount}</b><span>Waiting for you</span></div>
+          <div><b>{notShared}</b><span>Not shared</span></div>
+        </div>
+        <RoundActions actions={[
+          { icon: 'plus', label: 'Add a goal', onClick: p.onAddGoal },
+          { icon: 'spark', label: 'Tell Abel', onClick: p.onTellAbel },
+          { icon: 'file', label: 'Import a chat', onClick: p.onImport },
+        ]} />
       </header>
-
-      <div className="nbody cab">
+      <div className="nbody">
         {/* ---------- About you ---------- */}
-        <section className="cab-card">
-          <Head title="About you" />
-          <p className="about-p">{paragraph || 'Nothing yet.'}</p>
-          {aboutOpen && (
-            <div className="about-list">
-              {PROFILE_FIELDS.map((f) => {
-                const e = profileEntryFor(state.entries, f.key);
-                const shown = e && !isUnconfirmed(e) ? e : undefined;
-                return (
-                  <div className="about-row" key={f.key}>
-                    <span className="about-k">{f.label}</span>
-                    <span className="about-v">
-                      {shown ? shown.title : <i>Not set</i>}
-                      {shown && <span className={`about-src src-${originOf(shown)}`}>{SHORT_ORIGIN[originOf(shown)]}</span>}
-                    </span>
-                    {f.question && <button className="btn link" onClick={() => p.onInterview(f.key)}>{shown ? 'Edit' : 'Add'}</button>}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          <div className="about-foot">
-            <button className="cab-more" aria-expanded={aboutOpen} onClick={() => setAboutOpen(!aboutOpen)}>
-              {aboutOpen ? 'Less' : 'Details'} <Chevron rotate={aboutOpen ? -90 : 90} size={13} />
-            </button>
-            {missing > 0 && <button className="btn small primary" onClick={() => p.onInterview()}>Add more</button>}
+        <Band left="About you" right={<button className="btn link band-act" onClick={() => setAboutOpen(!aboutOpen)}>{aboutOpen ? 'Less' : 'Details'}</button>} />
+        <div className="ncard flat">
+          <div className="nrow2 static">
+            <span className="n-l">
+              <span className="about-p">{paragraph || 'Nothing yet.'}</span>
+              {missing > 0 && <span className="wait-act"><button className="btn small primary" onClick={() => p.onInterview()}>Add more</button></span>}
+            </span>
           </div>
-        </section>
+          {aboutOpen && PROFILE_FIELDS.map((f) => {
+            const e = profileEntryFor(state.entries, f.key);
+            const shown = e && !isUnconfirmed(e) ? e : undefined;
+            return (
+              <div className="nrow2 static" key={f.key}>
+                <span className="n-l">
+                  <span className="n-sub">{f.label}</span>
+                  <span className="n-name">{shown && <Dot e={shown} />}{shown ? shown.title : <span className="cab-unset">Not set</span>}</span>
+                </span>
+                {f.question && <button className="btn link" onClick={() => p.onInterview(f.key)}>{shown ? 'Edit' : 'Add'}</button>}
+              </div>
+            );
+          })}
+        </div>
 
         {/* ---------- Waiting for you ---------- */}
-        <section className="cab-card">
-          <Head title="Waiting for you" count={waitingCount} />
-          {waitingCount === 0 && <p className="cab-empty">All checked ✓</p>}
+        <Band left="Waiting for you" right={waitingCount ? <span className="band-note">{waitingCount}</span> : undefined} />
+        <div className="ncard flat">
+          {waitingCount === 0 && <div className="nrow2 static"><span className="n-l"><span className="n-sub">All checked ✓</span></span></div>}
           {guesses.map((e) => (
-            <div className="cab-wait" key={e.id}>
-              <span className="cab-tag bank">Nordea noticed</span>
-              <b>{e.type === 'profile' && e.profileField ? `${PROFILE_FIELD[e.profileField].label}: ${e.title}` : e.title}</b>
-              {e.detail && <span className="cab-d">{e.detail}</span>}
-              <Why e={e} />
-              <Decide onPick={(d) => apply(e, d)} label={e.title} />
+            <div className="nrow2 static wait" key={e.id}>
+              <span className="n-l">
+                <span className="n-name"><Dot e={e} />{e.type === 'profile' && e.profileField ? `${PROFILE_FIELD[e.profileField].label}: ${e.title}` : e.title}</span>
+                {e.detail && <span className="n-sub">{e.detail}</span>}
+                <span className="n-sub"><span className="src-chip">Nordea noticed</span></span>
+                <Why e={e} />
+                <Decide onPick={(d) => apply(e, d)} label={e.title} />
+              </span>
             </div>
           ))}
           {stale.map((e) => (
-            <div className="cab-wait" key={e.id}>
-              <span className="cab-tag you">Your old goal</span>
-              <b>Still saving for “{e.title}”?</b>
-              <Decide options={['keep', 'delete']} onPick={(d) => apply(e, d)} label={e.title} />
+            <div className="nrow2 static wait" key={e.id}>
+              <span className="n-l">
+                <span className="n-name"><Dot e={e} />Still saving for “{e.title}”?</span>
+                <span className="n-sub"><span className="src-chip">Your old goal</span></span>
+                <Decide options={['keep', 'delete']} onPick={(d) => apply(e, d)} label={e.title} />
+              </span>
             </div>
           ))}
           {pipe.map((c) => (
-            <div className="cab-wait" key={c.id}>
-              <span className="cab-tag you">{SOURCE_NAME[c.source]}</span>
-              <b>{c.title}</b>
-              <Decide onPick={(d) => decidePipe(c.id, d === 'share' ? 'save' : d === 'private' ? 'private' : 'drop')} label={c.title} />
+            <div className="nrow2 static wait" key={c.id}>
+              <span className="n-l">
+                <span className="n-name"><span className="dotc you" />{c.title}</span>
+                <span className="n-sub"><span className="src-chip">{SOURCE_NAME[c.source]}</span></span>
+                <Decide current={c.filter === 'private' ? 'private' : undefined} onPick={(d) => decidePipe(c.id, d === 'share' ? 'save' : d === 'private' ? 'private' : 'drop')} label={c.title} />
+              </span>
             </div>
           ))}
           {approvals.map((c) => (
-            <div className="cab-wait" key={c.id}>
-              <b>{c.summary}</b>
-              {c.detail && <span className="cab-d">{c.detail}</span>}
-              <Decide options={['share', 'delete']} onPick={(d) => decideApproval(c.id, d === 'share')} label={c.summary} />
+            <div className="nrow2 static wait" key={c.id}>
+              <span className="n-l">
+                <span className="n-name">{c.summary}</span>
+                {c.detail && <span className="n-sub">{c.detail}</span>}
+                <Decide options={['share', 'delete']} onPick={(d) => decideApproval(c.id, d === 'share')} label={c.summary} />
+              </span>
             </div>
           ))}
-        </section>
+        </div>
 
         {/* ---------- Added by you ---------- */}
-        <section className="cab-card">
-          <Head title="Added by you" action={<button className="btn link" onClick={p.onAddGoal}><Icon name="plus" size={15} /> Add</button>} />
-          {state.goals.length + mine.length === 0 && <p className="cab-empty">Nothing yet. Add a goal or tell Abel.</p>}
+        <Band left="Added by you" right={<button className="btn link band-act" onClick={p.onAddGoal}>+ Add</button>} />
+        <div className="ncard flat">
+          {state.goals.length + mine.length === 0 && <div className="nrow2 static"><span className="n-l"><span className="n-sub">Nothing yet. Add a goal or tell Abel.</span></span></div>}
           {state.goals.map((g) => (
-            <div className={`cab-item${goalOpen === g.goalId ? ' open' : ''}`} key={g.goalId}>
-              <button className="cab-row" aria-expanded={goalOpen === g.goalId} onClick={() => setGoalOpen(goalOpen === g.goalId ? null : g.goalId)}>
-                <span className="cab-t">
-                  <b>{g.title}</b>
-                  <span>{n0(g.saved)} of {eur(g.target)} · {monthShort(g.targetDate.slice(0, 7))}</span>
-                  <span className="cab-bar"><i style={{ width: `${Math.min(100, g.percentSaved)}%` }} /></span>
+            <React.Fragment key={g.goalId}>
+              <button className="nrow2 goal" aria-expanded={goalOpen === g.goalId} onClick={() => setGoalOpen(goalOpen === g.goalId ? null : g.goalId)}>
+                <span className="n-l">
+                  <span className="n-name">{g.title}</span>
+                  <span className="n-sub">{n0(g.saved)} of {eur(g.target)} · {monthShort(g.targetDate.slice(0, 7))}</span>
+                  <span className="gbar"><i style={{ width: `${Math.min(100, g.percentSaved)}%` }} /></span>
                 </span>
-                <span className={`npill ${g.onTrack ? 'up' : 'down'}`}>{g.onTrack ? 'On track' : `${eur(g.shortBy)} short`}</span>
+                <span className="n-r"><span className={`npill ${g.onTrack ? 'up' : 'down'}`}>{g.onTrack ? 'On track' : `${eur(g.shortBy)} short`}</span></span>
               </button>
               {goalOpen === g.goalId && (
-                <div className="cab-act">
-                  {(() => { const e = state.entries.find((x) => x.id === g.goalId); return e ? <Decide current={currentOf(e)} onPick={(d) => apply(e, d)} label={g.title} /> : null; })()}
-                  <button className="cab-more" onClick={() => p.onAskAbout(`Am I on track for “${g.title}”?`)}>Ask Abel about it</button>
+                <div className="nrow2 static wait">
+                  <span className="n-l">
+                    {(() => { const e = state.entries.find((x) => x.id === g.goalId); return e ? <Decide current={currentOf(e)} onPick={(d) => apply(e, d)} label={g.title} /> : null; })()}
+                    <button className="btn link cab-why" onClick={() => p.onAskAbout(`Am I on track for “${g.title}”?`)}>Ask Abel about it</button>
+                  </span>
                 </div>
               )}
-            </div>
+            </React.Fragment>
           ))}
           {mine.map((e) => <Item key={e.id} e={e} apply={apply} />)}
-        </section>
+        </div>
 
         {/* ---------- Added by Nordea ---------- */}
-        <section className="cab-card">
-          <Head title="Added by Nordea" />
-          {nordea.length === 0 && <p className="cab-empty">Nothing yet.</p>}
+        <Band left="Added by Nordea" />
+        <div className="ncard flat">
+          {nordea.length === 0 && <div className="nrow2 static"><span className="n-l"><span className="n-sub">Nothing yet.</span></span></div>}
           {nordea.map((e) => <Item key={e.id} e={e} apply={apply} />)}
-        </section>
+        </div>
 
         {/* Deleted (archived or marked wrong): out of the way, can be restored. */}
         {old.length > 0 && (
-          <button className="cab-old" aria-expanded={oldOpen} onClick={() => setOldOpen(!oldOpen)}>
-            Deleted · {old.length} <Chevron rotate={oldOpen ? -90 : 90} size={13} />
-          </button>
-        )}
-        {oldOpen && (
-          <section className="cab-card">
-            {old.map((e) => (
-              <div className="cab-wait" key={e.id}>
-                <b>{e.title}</b>
-                <span className="cab-act"><Choice kind="restore" label="Restore" onClick={() => p.onUpdate(e, { status: 'active' })} /></span>
+          <>
+            <Band left="Deleted" right={<button className="btn link band-act" onClick={() => setOldOpen(!oldOpen)}>{oldOpen ? 'Hide' : `Show ${old.length}`}</button>} />
+            {oldOpen && (
+              <div className="ncard flat">
+                {old.map((e) => (
+                  <div className="nrow2 static" key={e.id}>
+                    <span className="n-l"><span className="n-name"><Dot e={e} />{e.title}</span></span>
+                    <button className="btn small" onClick={() => p.onUpdate(e, { status: 'active' })}>Restore</button>
+                  </div>
+                ))}
               </div>
-            ))}
-          </section>
+            )}
+          </>
         )}
         {(state.documents || []).length > 0 && <DocsSection userId={state.user.id} docs={state.documents} onDelete={p.onDeleteDoc} />}
       </div>

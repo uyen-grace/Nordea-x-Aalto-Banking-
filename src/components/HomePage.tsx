@@ -81,7 +81,7 @@ export const HomePage: React.FC<Props> = (p) => {
   const card = (e: CabinetEntry) =>
     e.status === 'stale' ? (
       <div className="card" key={e.id}>
-        <span className="cab-tag you">Your old goal</span>
+        <span className="from you">Your goal</span>
         <div>
           <h3>Still saving for “{e.title}”?</h3>
           <p>No money added for a long time.</p>
@@ -90,7 +90,7 @@ export const HomePage: React.FC<Props> = (p) => {
       </div>
     ) : (
       <div className="card" key={e.id}>
-        <span className="cab-tag bank">Nordea noticed</span>
+        <span className="from bank">Nordea noticed</span>
         <div>
           <h3>{e.title}</h3>
           <p>{e.detail.replace(/\s*Is this right\?$/, '')}</p>

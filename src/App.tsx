@@ -451,7 +451,7 @@ export default function App() {
                 <div className="toast" role="status">
                   <span>{toast.message}</span>
                   {toast.undoToken && (
-                    <button className="btn link" style={{ color: '#B9C4FF', marginLeft: 8 }} onClick={() => { undo(toast.undoToken!); setToast(null); }}>
+                    <button className="btn link" style={{ color: '#F0C25A', marginLeft: 8 }} onClick={() => { undo(toast.undoToken!); setToast(null); }}>
                       Undo
                     </button>
                   )}
