@@ -27,7 +27,7 @@ export function registerPipelineRoutes(app: Express) {
   // What waits for the customer ("Waiting for you" in the app).
   app.get('/api/pipeline/:uid/waiting', h((req, res) => res.json({ items: waitingFor(String(req.params.uid)) })));
 
-  // Save · Keep private · Drop, per item.
+  // Save · Save privately · Not needed, per item.
   app.post('/api/pipeline/:uid/items/:id', h((req, res) => {
     const action = String(req.body?.action);
     if (!['save', 'private', 'drop'].includes(action)) return res.status(400).json({ error: 'action must be save, private or drop' });

@@ -3,6 +3,7 @@ import { ChatMessage, CabinetEntry, MessageCard, Share } from '../types.js';
 import { Icon, BotAvatar, Chevron } from '../ui/icons.js';
 import { eur, eurP, dayMonth, monthShort } from '../ui/format.js';
 import { HELPERS } from '../ui/helpers.js';
+import { Choice } from '../ui/Choice.js';
 import { documentUrl } from '../services/api.js';
 import type { ImportBody, DocInfo } from '../services/api.js';
 
@@ -277,7 +278,7 @@ export const Chat: React.FC<Props> = (p) => {
             <div className="of-fee"><Icon name="shield" /><span>{d.feeText}</span></div>
             {open && (
               <>
-                <div className="of-act"><button className="btn primary" onClick={() => act('offer_show')}>{d.cta}</button><button className="btn" onClick={() => act('offer_no')}>No thanks</button></div>
+                <div className="of-act"><Choice large kind="yes" label={d.cta} onClick={() => act('offer_show')} /><Choice large kind="no" label="No thanks" onClick={() => act('offer_no')} /></div>
                 <div className="of-foot"><button className="btn link" onClick={() => p.onOpenHelper('person')}>{d.alternative}</button><button className="btn link muted" onClick={() => act('offer_off')}>Turn off partner offers</button></div>
               </>
             )}
@@ -311,7 +312,7 @@ export const Chat: React.FC<Props> = (p) => {
             <div className="of-row"><div className="of-rt"><span><b>To</b></span><span>{d.to}</span></div></div>
             <div className="of-row"><div className="of-rt"><span><b>Starts</b></span><span>{dayMonth(d.starts)}</span></div></div>
             <div className="of-fee"><Icon name="shield" /><span>{d.earns}</span></div>
-            {open && <div className="of-act" style={{ paddingBottom: 12 }}><button className="btn primary" onClick={() => act('plan_confirm')}>Yes, set it up</button><button className="btn" onClick={() => act('plan_cancel')}>Cancel</button></div>}
+            {open && <div className="of-act" style={{ paddingBottom: 12 }}><Choice large kind="yes" label="Yes, set it up" onClick={() => act('plan_confirm')} /><Choice large kind="no" label="Not now" onClick={() => act('plan_cancel')} /></div>}
           </div>
         );
       case 'confirm_save':
@@ -319,7 +320,7 @@ export const Chat: React.FC<Props> = (p) => {
           <div className="offer">
             <div className="of-b" style={{ paddingTop: 14 }}><b>🔒 {d.draft?.title}</b></div>
             <div className="of-fee"><Icon name="shield" /><span>{c.body}</span></div>
-            {open && <div className="of-act" style={{ paddingBottom: 12 }}><button className="btn primary" onClick={() => act('save_private')}>Save privately</button><button className="btn" onClick={() => act('save_no')}>Don’t save it</button></div>}
+            {open && <div className="of-act" style={{ paddingBottom: 12 }}><Choice large kind="private" primary label="Save privately" onClick={() => act('save_private')} /><Choice large kind="no" label="Not needed" onClick={() => act('save_no')} /></div>}
           </div>
         );
       case 'handoff':
@@ -334,7 +335,7 @@ export const Chat: React.FC<Props> = (p) => {
             {d.heldBack > 0 && <p className="rc-n">{d.heldBack} held back: not approved, private or not checked yet.</p>}
             <span className="earns no">{d.earns}</span>
             <p className="rc-n share-n"><Icon name="cal" /><span>{d.share}</span></p>
-            {open && <div className="of-act" style={{ padding: '4px 0 0' }}><button className="btn primary" onClick={() => act('handoff_connect')}>Connect me</button><button className="btn" onClick={() => act('handoff_no')}>Not now</button></div>}
+            {open && <div className="of-act" style={{ padding: '4px 0 0' }}><Choice large kind="yes" label="Connect me" onClick={() => act('handoff_connect')} /><Choice large kind="no" label="Not now" onClick={() => act('handoff_no')} /></div>}
           </div>
         );
       case 'import': {
@@ -350,7 +351,7 @@ export const Chat: React.FC<Props> = (p) => {
               </button>
             ))}
             {impShow === m.id && d.transcript && <div className="imp-src">{String(d.transcript).split('\n').map((l: string, k: number) => { const [w, ...rest] = l.split(': '); return <p key={k}><b>{w}:</b> {rest.join(': ')}</p>; })}</div>}
-            {open && <div className="of-act"><button className="btn primary" disabled={!n} onClick={() => act('import_save', { selected: sel.map((v, k) => (v ? k : -1)).filter((k) => k >= 0) })}>Save {n} {n === 1 ? 'thing' : 'things'}</button><button className="btn" onClick={() => act('import_no')}>Not now</button></div>}
+            {open && <div className="of-act"><Choice large kind="yes" disabled={!n} label={`Save ${n} ${n === 1 ? 'thing' : 'things'}`} onClick={() => act('import_save', { selected: sel.map((v, k) => (v ? k : -1)).filter((k) => k >= 0) })} /><Choice large kind="no" label="Not now" onClick={() => act('import_no')} /></div>}
             {d.transcript && <div className="of-foot"><button className="btn link" onClick={() => setImpShow(impShow === m.id ? null : m.id)}>{impShow === m.id ? 'Hide the conversation' : 'Show the conversation'}</button></div>}
           </div>
         );
@@ -367,9 +368,9 @@ export const Chat: React.FC<Props> = (p) => {
             <div className="of-fee"><Icon name="shield" /><span>{d.how === 'conflict' ? 'Updating keeps the old version in its history, and you can undo it.' : 'Nothing is saved until you choose.'}</span></div>
             {open && (
               <div className="of-act stack3" style={{ paddingBottom: 12 }}>
-                <button className="btn primary" onClick={() => act('dup_update')}>Update “{ex.title}”</button>
-                <button className="btn" onClick={() => act('dup_both')}>Keep both</button>
-                <button className="btn quiet" onClick={() => act('dup_keep')}>Leave it as it is</button>
+                <Choice large kind="yes" label={`Update “${ex.title}”`} onClick={() => act('dup_update')} />
+                <Choice large kind="alt" label="Keep both" onClick={() => act('dup_both')} />
+                <Choice large kind="no" label="Leave it as it is" onClick={() => act('dup_keep')} />
               </div>
             )}
           </div>

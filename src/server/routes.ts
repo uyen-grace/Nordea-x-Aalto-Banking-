@@ -271,7 +271,7 @@ export function registerV14Routes(app: Express) {
         const c = card('confirm_plan');
         if (!c) return res.status(400).json({ error: 'No plan on this message' });
         if (action === 'plan_cancel') {
-          db.updateMessage(msg.id, { resolved: 'Cancel' });
+          db.updateMessage(msg.id, { resolved: 'Not now' });
           out.push(agentMsg(userId, conv, helper, 'Okay, nothing changes. Your saving stays as it is.'));
           break;
         }
@@ -289,7 +289,7 @@ export function registerV14Routes(app: Express) {
         const c = card('confirm_save');
         if (!c) return res.status(400).json({ error: 'Nothing to save on this message' });
         if (action === 'save_no') {
-          db.updateMessage(msg.id, { resolved: 'Don’t save it' });
+          db.updateMessage(msg.id, { resolved: 'Not needed' });
           out.push(agentMsg(userId, conv, helper, 'Okay, I won’t keep it. 💙'));
           break;
         }

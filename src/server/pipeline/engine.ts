@@ -6,7 +6,7 @@
 //                with, corrects something known, a lasting preference) and marks private things;
 //                code then enforces the rules (sensitive -> private, duplicates -> merged, no
 //                invented numbers). Without AI, a rule check decides and says so.
-//   3. Customer  each kept item waits for the customer: Save · Keep private · Drop
+//   3. Customer  each kept item waits for the customer: Save · Save privately · Not needed
 //   4. Cabinet   saved items go into the three agent stores (Supabase), with their source
 //   5. Nordea    only items the customer shares for a case are readable by staff (cases.ts)
 import { getProvider, type ToolDecl } from '../llm.js';

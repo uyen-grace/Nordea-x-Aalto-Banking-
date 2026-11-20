@@ -291,7 +291,7 @@ export default function App() {
   };
   const archive = async (e: CabinetEntry) => {
     const r = await deleteCabinetEntry(e.id);
-    setToast({ message: 'Removed. It’s kept in your history.', undoToken: r.undoToken });
+    setToast({ message: 'Archived. You can bring it back any time.', undoToken: r.undoToken });
     refresh();
   };
   const confirm = async (e: CabinetEntry) => {

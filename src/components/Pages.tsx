@@ -5,6 +5,7 @@ import { Icon } from '../ui/icons.js';
 import { nfi, eur, monthLong, monthShort, n0, dayMonth } from '../ui/format.js';
 import { DetailHead, NRow, Band, Toggle, RoundActions, BAND_BG } from './Nordea.js';
 import { HistoryCard } from './HomePage.js';
+import { Choice } from '../ui/Choice.js';
 
 // ---------------- What Abel knows ----------------
 const DRAWERS: { name: string; has: (e: CabinetEntry) => boolean; icon: string }[] = [
@@ -36,11 +37,11 @@ interface KnowsProps {
 // ---------------- History of one entry ----------------
 const WHO: Record<EntryEvent['by'], string> = { you: 'You', abel: 'Abel', nordea: 'Nordea' };
 const DID: Record<EntryEvent['action'], string> = {
-  added: 'added it', changed: 'changed it', removed: 'removed it', brought_back: 'brought it back', confirmed: 'confirmed it',
+  added: 'added it', changed: 'changed it', removed: 'archived it', brought_back: 'brought it back', confirmed: 'confirmed it',
   marked_wrong: 'said it’s wrong', deleted: 'deleted it', undone: 'undid a change',
 };
 const FIELD: Record<string, string> = { title: 'Name', detail: 'Details', status: 'Status', private: 'Private', target: 'Target', readableBy: 'Who can use it', reviewed: 'Checked by you' };
-const STATUS: Record<string, string> = { active: 'In use', stale: 'Looks out of date', archived: 'Removed', disputed: 'Marked wrong' };
+const STATUS: Record<string, string> = { active: 'In use', stale: 'Looks out of date', archived: 'Archived', disputed: 'Marked wrong' };
 const fullDate = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 function val(field: string, v: any): string {
   if (v == null || v === '') return '–';
@@ -90,7 +91,7 @@ const ItemRow: React.FC<{ e: CabinetEntry; open: boolean; onMenu: () => void; wh
   const [hist, setHist] = useState(false);
   const c = e.type === 'blind_spot' ? 'grey' : e.source === 'nordea' ? 'bank' : 'you';
   const meta =
-    e.status === 'archived' ? 'Removed · kept in history' : e.status === 'stale' ? 'Looks out of date' : e.private ? 'Private · never used for offers' : e.source === 'document' ? 'From a document you imported' : '';
+    e.status === 'archived' ? 'Archived · kept in history' : e.status === 'stale' ? 'Looks out of date' : e.private ? 'Private · never used for offers' : e.source === 'document' ? 'From a document you imported' : '';
   return (
     <div className="row">
       <div className="row-main">
@@ -107,17 +108,17 @@ const ItemRow: React.FC<{ e: CabinetEntry; open: boolean; onMenu: () => void; wh
         <div className="row-opts">
           {e.status === 'archived' ? (
             <>
-              <button className="btn small" onClick={() => onUpdate(e, { status: 'active' })}>Bring back</button>
-              <button className="btn small quiet" aria-expanded={hist} onClick={() => setHist(!hist)}>{hist ? 'Hide history' : 'History'}</button>
+              <Choice kind="restore" label="Bring back" onClick={() => onUpdate(e, { status: 'active' })} />
+              <Choice kind="more" label={hist ? 'Hide history' : 'History'} expanded={hist} onClick={() => setHist(!hist)} />
             </>
           ) : e.status === 'disputed' ? (
-            <button className="btn small" onClick={() => onUpdate(e, { status: 'active' })}>It’s right after all</button>
+            <Choice kind="yes" primary={false} label="It’s right after all" onClick={() => onUpdate(e, { status: 'active' })} />
           ) : (
             <>
-              {e.source === 'nordea' && e.type !== 'blind_spot' && <button className="btn small" onClick={() => onUpdate(e, { status: 'disputed' })}>That’s wrong</button>}
-              {e.why && <button className="btn small quiet" aria-expanded={whyOpen} onClick={onWhy}>{whyOpen ? 'Hide' : 'How do we know?'}</button>}
-              <button className="btn small quiet" aria-expanded={hist} onClick={() => setHist(!hist)}>{hist ? 'Hide history' : 'History'}</button>
-              {e.type !== 'blind_spot' && <button className="btn small quiet" onClick={() => onArchive(e)}>Remove</button>}
+              {e.source === 'nordea' && e.type !== 'blind_spot' && <Choice kind="no" label="That’s wrong" onClick={() => onUpdate(e, { status: 'disputed' })} />}
+              {e.type !== 'blind_spot' && <Choice kind="archive" label="Archive" onClick={() => onArchive(e)} />}
+              {e.why && <Choice kind="more" label={whyOpen ? 'Hide' : 'How do we know?'} expanded={whyOpen} onClick={onWhy} />}
+              <Choice kind="more" label={hist ? 'Hide history' : 'History'} expanded={hist} onClick={() => setHist(!hist)} />
               {e.type !== 'blind_spot' && (
                 <div className="perm-row" style={{ width: '100%' }}>
                   <span>Who can use it:</span>
@@ -155,8 +156,8 @@ const ApprovalWaiting: React.FC<{ cards: ApprovalCard[]; onDecide: (id: string, 
               <span className="n-sub">{c.levelName} · approval {c.approvalId}</span>
               {c.why && <span className="n-sub">Why: {c.why}</span>}
               <span className="wait-act">
-                <button className="btn small primary" onClick={() => decide(c.id, true)}>Approve</button>
-                <button className="btn small" onClick={() => decide(c.id, false)}>Reject</button>
+                <Choice kind="yes" label="Approve" onClick={() => decide(c.id, true)} />
+                <Choice kind="no" label="Reject" onClick={() => decide(c.id, false)} />
               </span>
             </span>
           </div>
@@ -186,13 +187,11 @@ const PipelineWaiting: React.FC<{ items: PipeItem[]; onDecide: (id: string, a: '
             <span className="n-l">
               <span className="n-name"><span className="dotc you" />{c.title}</span>
               {c.detail && c.detail !== c.title && <span className="n-sub">{c.detail}</span>}
-              <span className="n-sub"><span className="src-chip">{SOURCE_NAME[c.source]}</span> {c.filter === 'private' ? 'Looks private' : `Kept: ${c.reason}`}</span>
+              <span className="n-sub"><span className="src-chip">{SOURCE_NAME[c.source]}</span> {c.filter === 'private' ? 'Looks private, so we suggest saving it privately' : `Why it’s here: ${c.reason}`}</span>
               <span className="wait-act">
-                <button className="btn small primary" onClick={() => onDecide(c.id, c.filter === 'private' ? 'private' : 'save')}>{c.filter === 'private' ? 'Keep private' : 'Save'}</button>
-                {c.filter === 'private'
-                  ? <button className="btn small" onClick={() => onDecide(c.id, 'save')}>Save and share</button>
-                  : <button className="btn small" onClick={() => onDecide(c.id, 'private')}>Keep private</button>}
-                <button className="btn small quiet" onClick={() => onDecide(c.id, 'drop')}>Drop</button>
+                <Choice kind="yes" label="Save" primary={c.filter !== 'private'} title="Abel can use it, and Nordea too if you share a case with them" onClick={() => onDecide(c.id, 'save')} />
+                <Choice kind="private" label="Save privately" primary={c.filter === 'private'} title="Only Abel can use it" onClick={() => onDecide(c.id, 'private')} />
+                <Choice kind="no" label="Not needed" onClick={() => onDecide(c.id, 'drop')} />
               </span>
             </span>
           </div>
@@ -293,9 +292,9 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
                     <span className="n-name"><span className="dotc bank" />{e.title}</span>
                     {e.detail && <span className="n-sub">{e.detail}</span>}
                     <span className="wait-act">
-                      <button className="btn small primary" onClick={() => p.onConfirm(e)}>Confirm</button>
-                      <button className="btn small" onClick={() => p.onUpdate(e, { status: 'disputed' })}>That’s wrong</button>
-                      {e.why && <button className="btn small quiet" aria-expanded={why === e.id} onClick={() => setWhy(why === e.id ? null : e.id)}>{why === e.id ? 'Hide' : 'How do we know?'}</button>}
+                      <Choice kind="yes" label="Yes, that’s right" onClick={() => p.onConfirm(e)} />
+                      <Choice kind="no" label="No, that’s wrong" onClick={() => p.onUpdate(e, { status: 'disputed' })} />
+                      {e.why && <Choice kind="more" label={why === e.id ? 'Hide' : 'How do we know?'} expanded={why === e.id} onClick={() => setWhy(why === e.id ? null : e.id)} />}
                     </span>
                     {why === e.id && e.why && <span className="n-sub why-l">{e.why}</span>}
                   </span>
@@ -345,8 +344,8 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
                   <span className="n-name">{e.title}</span>
                   <span className="n-sub">{e.target ? `${eur(e.target.amount)} by ${monthShort(e.target.date.slice(0, 7))}` : e.detail} · Still a plan?</span>
                   <span className="wait-act">
-                    <button className="btn small" onClick={() => p.onKeep(e)}>Yes, keep it</button>
-                    <button className="btn small quiet" onClick={() => p.onArchive(e)}>No, remove it</button>
+                    <Choice kind="yes" label="Yes, keep it" onClick={() => p.onKeep(e)} />
+                    <Choice kind="archive" label="No, archive it" onClick={() => p.onArchive(e)} />
                   </span>
                 </span>
                 <span className="n-r"><span className="npill grey">Out of date</span></span>
@@ -387,7 +386,7 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
             <DocsSection userId={state.user.id} docs={state.documents || []} onDelete={p.onDeleteDoc} />
             {removed.length > 0 && (
               <>
-                <div className="sec-title"><h2>Removed</h2><span className="kicker">kept in history</span></div>
+                <div className="sec-title"><h2>Archived</h2><span className="kicker">kept in history</span></div>
                 <div className="list">
                   {removed.map((e) => (
                     <ItemRow key={e.id} e={e} open={menu === e.id} onMenu={() => { setMenu(menu === e.id ? null : e.id); setWhy(null); }} whyOpen={false} onWhy={() => {}} onUpdate={p.onUpdate} onArchive={p.onArchive} />
@@ -532,7 +531,7 @@ export const RewardsPage: React.FC<{ state: AppState; rewards: Reward[]; onAsk: 
             {how && <p className="dr-how">You earn {dr.rules.sharedPerNote} points once for each note you share, and points each time it’s really read: Abel 1 a reply (up to 10 a day), a partner offer 3, your adviser 10. Remove a note and it stops earning.</p>}
             {drOpen && (
               <div className="ncard flat">
-                {dr.mostUsed.length ? dr.mostUsed.map((n) => <NRow key={n.id} name={n.title} sub={n.removed ? 'Removed' : 'Still shared'} amount={`${n.reads}×`} chevron={false} />) : <NRow name="Nothing read yet" sub="Ask Abel something to start" chevron={false} />}
+                {dr.mostUsed.length ? dr.mostUsed.map((n) => <NRow key={n.id} name={n.title} sub={n.removed ? 'Archived' : 'Still shared'} amount={`${n.reads}×`} chevron={false} />) : <NRow name="Nothing read yet" sub="Ask Abel something to start" chevron={false} />}
               </div>
             )}
           </>

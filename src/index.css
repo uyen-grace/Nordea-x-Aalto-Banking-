@@ -811,3 +811,12 @@ span.cam-x{background:none}
 .ncard.notice .nt-t{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
 .ncard.notice .nt-t span{color:var(--ink-2);font-size:13.5px}
 .ncard.notice .nt-go{font-weight:700;color:var(--brand-soft)}
+
+/* ---- Choice buttons (src/ui/Choice.tsx): one look for every decision ---- */
+/* Order is always: yes → private → no/archive → "tell me more". Only the suggested answer is filled. */
+.choice svg{flex:none}
+.choice-no:not(.primary),.choice-archive:not(.primary){color:var(--ink-2)}
+.choice-more{text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--line)}
+.choices{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.choice-row{display:flex;flex-wrap:wrap;gap:8px}
+.choice-hint{font-size:12.5px;color:var(--muted)}

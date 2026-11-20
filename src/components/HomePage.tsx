@@ -6,6 +6,7 @@ import { nfi, ago } from '../ui/format.js';
 import { HELPERS, HELPER_ORDER } from '../ui/helpers.js';
 import { LOGO_WHITE } from '../constants/logos.js';
 import { BAND_BG, RoundActions, NRow, Band, NChev } from './Nordea.js';
+import { Choice } from '../ui/Choice.js';
 
 interface Props {
   state: AppState;
@@ -81,8 +82,8 @@ export const HomePage: React.FC<Props> = (p) => {
           <p>Its date has passed and no money has been added for a long time.</p>
         </div>
         <div className="btns">
-          <button className="btn primary" onClick={() => p.onArchive(e)}>No, remove it</button>
-          <button className="btn" onClick={() => p.onKeep(e)}>Yes, keep it</button>
+          <Choice large kind="yes" label="Yes, keep it" onClick={() => p.onKeep(e)} />
+          <Choice large kind="archive" label="No, archive it" onClick={() => p.onArchive(e)} />
         </div>
       </div>
     ) : (
@@ -93,9 +94,9 @@ export const HomePage: React.FC<Props> = (p) => {
           <p>{e.detail.replace(/\s*Is this right\?$/, '')}</p>
         </div>
         <div className="btns">
-          <button className="btn primary" onClick={() => p.onConfirm(e)}>Confirm</button>
-          <button className="btn" onClick={() => p.onWrong(e)}>That’s wrong</button>
-          {e.why && <button className="btn quiet" onClick={() => setWhyId(whyId === e.id ? null : e.id)}>{whyId === e.id ? 'Hide' : 'How do we know?'}</button>}
+          <Choice large kind="yes" label="Yes, that’s right" onClick={() => p.onConfirm(e)} />
+          <Choice large kind="no" label="No, that’s wrong" onClick={() => p.onWrong(e)} />
+          {e.why && <Choice large kind="more" label={whyId === e.id ? 'Hide' : 'How do we know?'} expanded={whyId === e.id} onClick={() => setWhyId(whyId === e.id ? null : e.id)} />}
         </div>
         {e.why && whyId === e.id && <p className="why">{e.why}</p>}
       </div>

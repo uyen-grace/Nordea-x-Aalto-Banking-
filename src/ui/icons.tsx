@@ -37,7 +37,12 @@ export const ICONS: Record<string, string> = {
  "sliders": "<path d=\"M5 7h9M18 7h1M5 17h3M12 17h7\"/><circle cx=\"16\" cy=\"7\" r=\"2\"/><circle cx=\"10\" cy=\"17\" r=\"2\"/>",
  "gift": "<rect x=\"4\" y=\"9\" width=\"16\" height=\"11\" rx=\"1.5\"/><path d=\"M4 13h16M12 9v11M12 9c-2-4-6-3.5-6-1.5S10 9 12 9zm0 0c2-4 6-3.5 6-1.5S14 9 12 9z\"/>",
  "trash": "<path d=\"M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 12.5h9l1-12.5\"/><path d=\"M10 11v5M14 11v5\"/>",
- "clock": "<circle cx=\"12\" cy=\"12\" r=\"8\"/><path d=\"M12 7.5V12l3 2\"/>"
+ "clock": "<circle cx=\"12\" cy=\"12\" r=\"8\"/><path d=\"M12 7.5V12l3 2\"/>",
+ "x": "<path d=\"M6.5 6.5l11 11M17.5 6.5l-11 11\"/>",
+ "lock": "<rect x=\"5\" y=\"10.5\" width=\"14\" height=\"9.5\" rx=\"2\"/><path d=\"M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5\"/>",
+ "archive": "<rect x=\"3.5\" y=\"4.5\" width=\"17\" height=\"4.5\" rx=\"1\"/><path d=\"M5 9v10.5h14V9M10 13h4\"/>",
+ "undo": "<path d=\"M9 7L4.5 11.5 9 16\"/><path d=\"M4.5 11.5H14a5.5 5.5 0 0 1 0 11h-2\"/>",
+ "info": "<circle cx=\"12\" cy=\"12\" r=\"8\"/><path d=\"M12 11v5M12 8h.01\"/>"
 };
 
 export const Icon: React.FC<{ name: string; size?: number; className?: string; strokeWidth?: number }> = ({ name, size = 18, className, strokeWidth = 2 }) => (
