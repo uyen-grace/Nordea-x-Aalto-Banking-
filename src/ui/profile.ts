@@ -29,8 +29,11 @@ export const emptyFields = (entries: CabinetEntry[], covered: string[] = []): Pr
   PROFILE_FIELDS.filter((f) => f.question && !f.optional && !covered.includes(f.key) && !profileEntryFor(entries, f.key)).map((f) => f.key);
 
 /** The profile fields Nordea's data already answers (from the server's About you). */
-export const coveredFields = (about?: { facts: { key: string; from: string }[] }): string[] =>
-  (about?.facts || []).filter((f) => f.from === 'nordea').map((f) => f.key);
+export const coveredFields = (about?: { facts: { key: string; from: string }[] }, salaryFound?: boolean): string[] => {
+  const fromServer = (about?.facts || []).filter((f) => f.from === 'nordea').map((f) => f.key);
+  // Without the server's version, Nordea still knows work and income when a salary comes in.
+  return fromServer.length ? fromServer : salaryFound ? ['life_situation', 'income'] : [];
+};
 
 /** About you as one short paragraph, like Claude's memory: "Lauri, 31, lives in Helsinki. Works full-time. …"
  *  Only what Abel may use: the customer's own answers and what they confirmed. */

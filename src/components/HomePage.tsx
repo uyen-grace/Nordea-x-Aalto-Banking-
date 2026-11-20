@@ -144,9 +144,9 @@ export const HomePage: React.FC<Props> = (p) => {
           )}
         </div>
 
-        {interviewFields(state.entries, 5, coveredFields(state.about)).length > 0 && (
+        {interviewFields(state.entries, 5, coveredFields(state.about, state.salary?.found)).length > 0 && (
           <div className="ncard iv-cta">
-            <span className="t"><b>Help Abel get to know you</b><span>{interviewFields(state.entries, 5, coveredFields(state.about)).length + 1} quick questions</span></span>
+            <span className="t"><b>Help Abel get to know you</b><span>{interviewFields(state.entries, 5, coveredFields(state.about, state.salary?.found)).length + 1} quick questions</span></span>
             <button className="btn small primary" onClick={p.onInterview}>Start</button>
           </div>
         )}

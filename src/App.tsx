@@ -5,7 +5,7 @@ import { AddGoalModal } from './components/AddGoalModal.js';
 import { Interview } from './components/Interview.js';
 import { KnowsPage, applyDecision } from './components/Cabinet.js';
 import { tipsFor } from './ui/personal.js';
-import { interviewFields, coveredFields } from './ui/profile.js';
+import { coveredFields } from './ui/profile.js';
 import { HomePage } from './components/HomePage.js';
 import { PrivacyPage, AutopilotPage, RewardsPage, RedeemSheet, ContactPage, MorePage, DeleteDocSheet, ConfirmSheet } from './components/Pages.js';
 import { Chat } from './components/Chat.js';
@@ -132,14 +132,15 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
   }, [isDark]);
 
-  // Onboarding: the first time a customer opens the app, Abel's short "get to know you" chat opens by itself
-  // (once per customer in this browser). After that it's under About you → Add more, and on Home.
+  // Onboarding comes first: until the customer has answered Abel's questions, they open by themselves when the
+  // app starts (once per visit, so closing them isn't nagged). After that: About you → Add more, or Home.
   useEffect(() => {
     if (!state) return;
-    const key = `abel-onboarded-${state.user.id}`;
-    let seen = false;
-    try { seen = localStorage.getItem(key) === '1'; localStorage.setItem(key, '1'); } catch { /* storage may be blocked */ }
-    if (!seen && interviewFields(state.entries, 5, coveredFields(state.about)).length > 0) setInterview('all');
+    const answered = state.entries.some((e) => e.type === 'profile' && e.source === 'customer' && e.status === 'active');
+    const key = `abel-onboarding-shown-${state.user.id}`;
+    let shown = false;
+    try { shown = sessionStorage.getItem(key) === '1'; sessionStorage.setItem(key, '1'); } catch { /* storage may be blocked */ }
+    if (!answered && !shown) setInterview('all');
   }, [state?.user.id]);
 
   useEffect(() => {
@@ -438,7 +439,7 @@ export default function App() {
                   userName={state.user.name}
                   entries={state.entries}
                   only={interview === 'all' ? undefined : interview}
-                  covered={coveredFields(state.about)}
+                  covered={coveredFields(state.about, state.salary?.found)}
                   onClose={() => setInterview(null)}
                   onSaved={async (m) => {
                     setInterview(null);

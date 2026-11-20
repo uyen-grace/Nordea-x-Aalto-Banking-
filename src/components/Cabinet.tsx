@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AppState, ApprovalCard, PipeItem, fetchApprovalCards, decideApprovalCard, fetchPipelineWaiting, decidePipelineItem, SOURCE_NAME, confirmObservation, updateCabinetEntry, deleteCabinetEntry } from '../services/api.js';
+import { AppState, PipeItem, fetchPipelineWaiting, decidePipelineItem, SOURCE_NAME, confirmObservation, updateCabinetEntry, deleteCabinetEntry } from '../services/api.js';
 import { Decide, Decision } from '../ui/Decide.js';
 import { CabinetEntry, ProfileField } from '../types.js';
 import { Icon, Chevron } from '../ui/icons.js';
@@ -105,7 +105,6 @@ const Item: React.FC<{ e: CabinetEntry; apply: Apply }> = ({ e, apply }) => {
           <Chevron rotate={open ? -90 : 90} size={14} />
         </button>
         {e.detail && <span className={`n-sub${open ? '' : ' clamp1'}`}>{e.detail}</span>}
-        <From e={e} />
         <Why e={e} />
         {open && (
           <>
@@ -119,6 +118,21 @@ const Item: React.FC<{ e: CabinetEntry; apply: Apply }> = ({ e, apply }) => {
   );
 };
 
+/** About you from what the screen already has, if the server didn't send its version
+ *  (e.g. an older server still running): name, age, salary, saving, then what they said. */
+function fallbackAbout(state: AppState): string {
+  const eur0 = (n?: number) => (n == null ? '' : `${Math.round(n).toLocaleString('fi-FI')} €`);
+  const sal = state.salary;
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const parts = [
+    `${state.user.name}, ${state.user.age}.`,
+    sal?.found ? `Works, salary ${eur0(sal.latest)} a month${sal.changed && (sal.difference || 0) > 0 && sal.changeMonth ? ` (up ${eur0(sal.difference)} in ${months[Number(sal.changeMonth.slice(5, 7)) - 1]} ${sal.changeMonth.slice(0, 4)})` : ''}.` : '',
+    state.accounts?.savings?.monthlyDeposit ? `Saves ${eur0(state.accounts.savings.monthlyDeposit)} a month (${eur0(state.accounts.savings.balance)} saved).` : '',
+  ];
+  const said = aboutParagraph(state.user.name, state.entries, state.user.age).replace(/^[^.]*\.\s*/, '');
+  return [...parts, said].filter(Boolean).join(' ');
+}
+
 export const KnowsPage: React.FC<KnowsProps> = (p) => {
   const { state } = p;
   const name = state.user.name;
@@ -131,13 +145,10 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
 
   // Inputs from glasses / WhatsApp / documents, and cards waiting for approval, also wait here.
   const [pipe, setPipe] = useState<PipeItem[]>([]);
-  const [approvals, setApprovals] = useState<ApprovalCard[]>([]);
   const loadPipe = () => fetchPipelineWaiting(state.user.id).then(setPipe);
-  const loadApprovals = () => fetchApprovalCards(state.user.id).then(setApprovals);
-  useEffect(() => { loadPipe(); loadApprovals(); }, [state.user.id, state.entries.length]);
+  useEffect(() => { loadPipe(); }, [state.user.id, state.entries.length]);
   useEffect(() => { const t = window.setInterval(() => { if (!document.hidden) loadPipe(); }, 4000); return () => window.clearInterval(t); }, [state.user.id]);
   const decidePipe = async (id: string, a: 'save' | 'private' | 'drop') => { await decidePipelineItem(state.user.id, id, a); await loadPipe(); p.onChanged?.(); };
-  const decideApproval = async (id: string, ok: boolean) => { await decideApprovalCard(state.user.id, id, ok); await loadApprovals(); };
 
   const apply: Apply = async (e, d) => {
     const r = await applyDecision(state.user.id, e, d);
@@ -149,7 +160,7 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
   // Waiting for you
   const guesses = live.filter((e) => fromNordea(e) && !e.reviewed && e.status === 'active');
   const stale = live.filter((e) => e.type === 'goal' && e.status === 'stale');
-  const waitingCount = guesses.length + stale.length + pipe.length + approvals.length;
+  const waitingCount = guesses.length + stale.length + pipe.length;
   // Added by you / by Nordea (About you lives in its own card)
   const tracked = new Set(state.goals.map((g) => g.goalId));
   const mine = live.filter((e) => !fromNordea(e) && e.type !== 'profile' && e.status === 'active' && !tracked.has(e.id));
@@ -157,8 +168,8 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
   const old = state.entries.filter((e) => e.status === 'archived' || e.status === 'disputed');
   // About you
   // Worked out on the server from Nordea's data + what they said; the local version is only a fallback.
-  const paragraph = state.about?.text || aboutParagraph(name, state.entries, state.user.age);
-  const covered = coveredFields(state.about);
+  const paragraph = state.about?.text || fallbackAbout(state);
+  const covered = coveredFields(state.about, state.salary?.found);
   const missing = emptyFields(state.entries, covered).length;
   const questions = interviewFields(state.entries, 5, covered).length;
   const aboutRef = React.useRef<HTMLDivElement>(null);
@@ -284,15 +295,6 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
                 <span className="n-name">{c.title}</span>
                 <span className="from you">You set this · {SOURCE_NAME[c.source]}</span>
                 <Decide current={c.filter === 'private' ? 'private' : undefined} onPick={(d) => decidePipe(c.id, d === 'share' ? 'save' : d === 'private' ? 'private' : 'drop')} label={c.title} />
-              </span>
-            </div>
-          ))}
-          {showMine && approvals.map((c) => (
-            <div className="nrow2 static wait" key={c.id}>
-              <span className="n-l">
-                <span className="n-name">{c.summary}</span>
-                {c.detail && <span className="n-sub">{c.detail}</span>}
-                <Decide options={['share', 'delete']} onPick={(d) => decideApproval(c.id, d === 'share')} label={c.summary} />
               </span>
             </div>
           ))}
