@@ -3,17 +3,18 @@ import { CabinetEntry, ProfileField } from '../types.js';
 import { PROFILE_FIELD } from '../profileFields.js';
 import { createCabinetEntry, updateCabinetEntry, confirmObservation } from '../services/api.js';
 import { profileEntryFor, interviewFields, isUnconfirmed } from '../ui/profile.js';
-import { BotAvatar, Icon } from '../ui/icons.js';
+import { BotAvatar } from '../ui/icons.js';
+import { Decide, Decision as Pick } from '../ui/Decide.js';
 import { originOf } from '../entrySource.js';
 
 /**
  * "Get to know you": a short chat with Abel that fills About you.
  * - At most five questions: empty fields first, then Nordea's guesses to confirm.
  * - Tap an answer or type one; skip anything.
- * - Nothing is saved until the review at the end, where each answer gets Save / Private / Skip.
+ * - Nothing is saved until the review at the end, where each answer gets Share / Keep private / Delete.
  */
 
-type Decision = 'save' | 'private' | 'skip';
+type Decision = Extract<Pick, 'share' | 'private' | 'delete'>;
 interface Answer {
   field: ProfileField;
   /** What the customer tapped or typed (shown in the chat). */
@@ -66,7 +67,7 @@ export const Interview: React.FC<{
     if (!s || !field) return;
     const confirms = guess && s === YES ? guess : undefined;
     const value = confirms ? confirms.title : phrase ?? s;
-    setAnswers((a) => [...a, { field, said: s, value, confirms, replaces: confirms ? undefined : current, decision: 'save' }]);
+    setAnswers((a) => [...a, { field, said: s, value, confirms, replaces: confirms ? undefined : current, decision: 'share' }]);
     setTyped('');
     setStep((n) => n + 1);
   };
@@ -79,20 +80,20 @@ export const Interview: React.FC<{
     let n = 0;
     try {
       for (const a of answers) {
-        if (a.decision === 'skip') continue;
+        if (a.decision === 'delete') continue;
         if (a.confirms) {
           // A yes to Nordea's guess: it stays Nordea's (so the source stays true), now confirmed.
           await confirmObservation(userId, a.confirms.id);
-          if (a.decision === 'private') await updateCabinetEntry(a.confirms.id, { private: true, readableBy: { ...a.confirms.readableBy, offers: false } });
+          await updateCabinetEntry(a.confirms.id, { private: a.decision === 'private', readableBy: { ...a.confirms.readableBy, offers: a.decision === 'share' } });
         } else if (a.replaces && originOf(a.replaces) === 'you') {
           // Their own earlier answer: changed in place, so its history shows the change.
-          await updateCabinetEntry(a.replaces.id, { title: a.value, private: a.decision === 'private', reviewed: true });
+          await updateCabinetEntry(a.replaces.id, { title: a.value, private: a.decision === 'private', readableBy: { ...a.replaces.readableBy, abel: true, offers: a.decision === 'share' }, reviewed: true });
         } else {
           // A Nordea guess they corrected: marked wrong (Abel stops using it), then their answer is saved.
           if (a.replaces) await updateCabinetEntry(a.replaces.id, { status: 'disputed' });
           await createCabinetEntry({
             userId, type: 'profile', profileField: a.field, title: a.value, detail: '', source: 'customer',
-            private: a.decision === 'private', readableBy: { abel: true, offers: false }, how: 'Onboarding with Abel',
+            private: a.decision === 'private', readableBy: { abel: true, offers: a.decision === 'share' }, how: 'Onboarding with Abel',
           });
         }
         n++;
@@ -104,7 +105,7 @@ export const Interview: React.FC<{
     }
   };
 
-  const toSave = answers.filter((a) => a.decision !== 'skip').length;
+  const toSave = answers.filter((a) => a.decision !== 'delete').length;
 
   return (
     <div className="sheet-bg" onClick={onClose} role="presentation">
@@ -148,20 +149,14 @@ export const Interview: React.FC<{
                   <Bot>Save these?</Bot>
                   <div className="iv-review">
                     {answers.map((a, i) => (
-                      <div className={`iv-item${a.decision === 'skip' ? ' off' : ''}`} key={i}>
+                      <div className={`iv-item${a.decision === 'delete' ? ' off' : ''}`} key={i}>
                         <span className="iv-k">{PROFILE_FIELD[a.field].label}</span>
                         <b>{a.value}</b>
-                        <span className="iv-seg" role="radiogroup" aria-label={PROFILE_FIELD[a.field].label}>
-                          {([['save', 'check', 'Save'], ['private', 'lock', 'Private'], ['skip', 'x', 'Skip']] as [Decision, string, string][]).map(([d, icon, label]) => (
-                            <button key={d} role="radio" aria-checked={a.decision === d} className={`seg-${d}`} onClick={() => decide(i, d)}>
-                              <Icon name={icon} size={15} strokeWidth={2.2} />{label}
-                            </button>
-                          ))}
-                        </span>
+                        <Decide current={a.decision} onPick={(d) => decide(i, d as Decision)} label={PROFILE_FIELD[a.field].label} />
                       </div>
                     ))}
                   </div>
-                  <p className="iv-fine">Private: Abel can use it. Never offers or advisers.</p>
+                  <p className="iv-fine">Share: Nordea can use it · Keep private: only Abel</p>
                 </>
               )}
               {reviewing && answers.length === 0 && <Bot>Okay, nothing saved.</Bot>}

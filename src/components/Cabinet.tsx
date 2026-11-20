@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { AppState, ApprovalCard, PipeItem, fetchApprovalCards, decideApprovalCard, fetchPipelineWaiting, decidePipelineItem, SOURCE_NAME } from '../services/api.js';
+import { AppState, ApprovalCard, PipeItem, fetchApprovalCards, decideApprovalCard, fetchPipelineWaiting, decidePipelineItem, SOURCE_NAME, confirmObservation, updateCabinetEntry, deleteCabinetEntry } from '../services/api.js';
+import { Decide, Decision } from '../ui/Decide.js';
 import { CabinetEntry, ProfileField } from '../types.js';
 import { Icon, Chevron } from '../ui/icons.js';
 import { eur, monthShort, n0 } from '../ui/format.js';
@@ -16,6 +17,7 @@ import { originOf } from '../entrySource.js';
  *   Waiting for you   - everything that needs a yes or no.
  *   Added by you      - goals and notes the customer set.
  *   Added by Nordea   - what Nordea noticed and the customer confirmed. "Why" opens on tap.
+ * Every item gets the same three choices: Share / Keep private / Delete (src/ui/Decide.tsx).
  */
 
 export interface KnowsProps {
@@ -35,7 +37,36 @@ export interface KnowsProps {
   onChanged?: () => void;
   /** Open the About you interview (everything missing, or one field). */
   onInterview: (only?: ProfileField) => void;
+  onToast?: (message: string, undoToken?: string) => void;
 }
+
+/** Share / Keep private / Delete on one entry. Used here and on Home, so both behave the same. */
+export async function applyDecision(userId: string, e: CabinetEntry, d: Decision): Promise<{ message: string; undoToken?: string }> {
+  const guess = fromNordea(e) && !e.reviewed;
+  try {
+    if (d === 'keep') {
+      const r = await updateCabinetEntry(e.id, { status: 'active', confirmedAt: new Date().toISOString() });
+      return { message: 'Kept', undoToken: r.undoToken };
+    }
+    if (d === 'delete') {
+      // A Nordea guess the customer rejects is marked wrong (so the same data doesn't suggest it again);
+      // anything else is archived. Both stay at the bottom of the page and can be restored.
+      if (guess) { await updateCabinetEntry(e.id, { status: 'disputed' }); return { message: 'Deleted' }; }
+      const r = await deleteCabinetEntry(e.id);
+      return { message: 'Deleted', undoToken: r.undoToken };
+    }
+    if (guess) await confirmObservation(userId, e.id);
+    const priv = d === 'private';
+    const r = await updateCabinetEntry(e.id, { private: priv, readableBy: { ...e.readableBy, abel: true, offers: !priv } });
+    return { message: priv ? 'Kept private' : 'Shared', undoToken: r.undoToken };
+  } catch {
+    return { message: 'That didn’t work. Try again.' };
+  }
+}
+
+/** Share / Keep private / Delete, applied to one entry. */
+type Apply = (e: CabinetEntry, d: Decision) => void;
+const currentOf = (e: CabinetEntry): Decision => (e.private ? 'private' : 'share');
 
 const fromNordea = (e: CabinetEntry) => originOf(e) === 'nordea' || originOf(e) === 'register';
 const SHORT_ORIGIN = { you: 'You', document: 'You', nordea: 'Nordea', register: 'Register', hidden: '' } as const;
@@ -63,7 +94,7 @@ const Why: React.FC<{ e: CabinetEntry }> = ({ e }) => {
 };
 
 /** One item in Added by you / Added by Nordea. Tap to show its actions. */
-const Item: React.FC<{ e: CabinetEntry; onUpdate: KnowsProps['onUpdate']; onArchive: KnowsProps['onArchive'] }> = ({ e, onUpdate, onArchive }) => {
+const Item: React.FC<{ e: CabinetEntry; apply: Apply }> = ({ e, apply }) => {
   const [open, setOpen] = useState(false);
   const [hist, setHist] = useState(false);
   return (
@@ -78,9 +109,8 @@ const Item: React.FC<{ e: CabinetEntry; onUpdate: KnowsProps['onUpdate']; onArch
       <Why e={e} />
       {open && (
         <div className="cab-act">
-          {fromNordea(e) && <Choice kind="no" label="It’s wrong" onClick={() => onUpdate(e, { status: 'disputed' })} />}
-          <Choice kind="archive" label="Archive" onClick={() => onArchive(e)} />
-          <Choice kind="more" label={hist ? 'Hide history' : 'History'} expanded={hist} onClick={() => setHist(!hist)} />
+          <Decide current={currentOf(e)} onPick={(d) => apply(e, d)} label={e.title} />
+          <button className="cab-more" aria-expanded={hist} onClick={() => setHist(!hist)}>{hist ? 'Hide history' : 'History'}</button>
           {hist && <HistoryList userId={e.userId} entryId={e.id} />}
         </div>
       )}
@@ -105,6 +135,12 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
   const decidePipe = async (id: string, a: 'save' | 'private' | 'drop') => { await decidePipelineItem(state.user.id, id, a); await loadPipe(); p.onChanged?.(); };
   const decideApproval = async (id: string, ok: boolean) => { await decideApprovalCard(state.user.id, id, ok); await loadApprovals(); };
 
+  const apply: Apply = async (e, d) => {
+    const r = await applyDecision(state.user.id, e, d);
+    p.onToast?.(r.message, r.undoToken);
+    p.onChanged?.();
+  };
+
   const live = state.entries.filter((e) => e.status !== 'archived' && e.type !== 'blind_spot');
   // Waiting for you
   const guesses = live.filter((e) => fromNordea(e) && !e.reviewed && e.status === 'active');
@@ -127,7 +163,7 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
           <b>What Abel knows</b>
           <button className="dh-side" onClick={p.onPrivacy}><Icon name="shield" />Privacy</button>
         </div>
-        <p className="kn-sub">Abel only uses what’s here.</p>
+        <p className="kn-sub">Share: Nordea can use it · Keep private: only Abel</p>
       </header>
 
       <div className="nbody cab">
@@ -167,45 +203,32 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
           {waitingCount === 0 && <p className="cab-empty">All checked ✓</p>}
           {guesses.map((e) => (
             <div className="cab-wait" key={e.id}>
-              <span className="cab-tag bank"><Icon name="bank" size={12} />Nordea noticed</span>
+              <span className="cab-tag bank">Nordea noticed</span>
               <b>{e.type === 'profile' && e.profileField ? `${PROFILE_FIELD[e.profileField].label}: ${e.title}` : e.title}</b>
               {e.detail && <span className="cab-d">{e.detail}</span>}
               <Why e={e} />
-              <span className="cab-act">
-                <Choice kind="yes" label="Right" onClick={() => p.onConfirm(e)} />
-                <Choice kind="no" label="Wrong" onClick={() => (e.type === 'profile' && e.profileField ? p.onInterview(e.profileField) : p.onUpdate(e, { status: 'disputed' }))} />
-              </span>
+              <Decide onPick={(d) => apply(e, d)} label={e.title} />
             </div>
           ))}
           {stale.map((e) => (
             <div className="cab-wait" key={e.id}>
-              <span className="cab-tag you"><Icon name="person" size={12} />Your old goal</span>
+              <span className="cab-tag you">Your old goal</span>
               <b>Still saving for “{e.title}”?</b>
-              <span className="cab-act">
-                <Choice kind="yes" label="Keep" onClick={() => p.onKeep(e)} />
-                <Choice kind="archive" label="Archive" onClick={() => p.onArchive(e)} />
-              </span>
+              <Decide options={['keep', 'delete']} onPick={(d) => apply(e, d)} label={e.title} />
             </div>
           ))}
           {pipe.map((c) => (
             <div className="cab-wait" key={c.id}>
-              <span className="cab-tag you"><Icon name="person" size={12} />{SOURCE_NAME[c.source]}</span>
+              <span className="cab-tag you">{SOURCE_NAME[c.source]}</span>
               <b>{c.title}</b>
-              <span className="cab-act">
-                <Choice kind="yes" label="Save" primary={c.filter !== 'private'} onClick={() => decidePipe(c.id, 'save')} />
-                <Choice kind="private" label="Private" primary={c.filter === 'private'} onClick={() => decidePipe(c.id, 'private')} />
-                <Choice kind="no" label="No" onClick={() => decidePipe(c.id, 'drop')} />
-              </span>
+              <Decide onPick={(d) => decidePipe(c.id, d === 'share' ? 'save' : d === 'private' ? 'private' : 'drop')} label={c.title} />
             </div>
           ))}
           {approvals.map((c) => (
             <div className="cab-wait" key={c.id}>
               <b>{c.summary}</b>
               {c.detail && <span className="cab-d">{c.detail}</span>}
-              <span className="cab-act">
-                <Choice kind="yes" label="Approve" onClick={() => decideApproval(c.id, true)} />
-                <Choice kind="no" label="Reject" onClick={() => decideApproval(c.id, false)} />
-              </span>
+              <Decide options={['share', 'delete']} onPick={(d) => decideApproval(c.id, d === 'share')} label={c.summary} />
             </div>
           ))}
         </section>
@@ -226,26 +249,26 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
               </button>
               {goalOpen === g.goalId && (
                 <div className="cab-act">
-                  <Choice kind="yes" primary label="Ask Abel" onClick={() => p.onAskAbout(`Am I on track for “${g.title}”?`)} />
-                  {(() => { const e = state.entries.find((x) => x.id === g.goalId); return e ? <Choice kind="archive" label="Archive" onClick={() => p.onArchive(e)} /> : null; })()}
+                  {(() => { const e = state.entries.find((x) => x.id === g.goalId); return e ? <Decide current={currentOf(e)} onPick={(d) => apply(e, d)} label={g.title} /> : null; })()}
+                  <button className="cab-more" onClick={() => p.onAskAbout(`Am I on track for “${g.title}”?`)}>Ask Abel about it</button>
                 </div>
               )}
             </div>
           ))}
-          {mine.map((e) => <Item key={e.id} e={e} onUpdate={p.onUpdate} onArchive={p.onArchive} />)}
+          {mine.map((e) => <Item key={e.id} e={e} apply={apply} />)}
         </section>
 
         {/* ---------- Added by Nordea ---------- */}
         <section className="cab-card">
           <Head title="Added by Nordea" />
           {nordea.length === 0 && <p className="cab-empty">Nothing yet.</p>}
-          {nordea.map((e) => <Item key={e.id} e={e} onUpdate={p.onUpdate} onArchive={p.onArchive} />)}
+          {nordea.map((e) => <Item key={e.id} e={e} apply={apply} />)}
         </section>
 
-        {/* Archived and marked wrong: out of the way, never gone. */}
+        {/* Deleted (archived or marked wrong): out of the way, can be restored. */}
         {old.length > 0 && (
           <button className="cab-old" aria-expanded={oldOpen} onClick={() => setOldOpen(!oldOpen)}>
-            Archived · {old.length} <Chevron rotate={oldOpen ? -90 : 90} size={13} />
+            Deleted · {old.length} <Chevron rotate={oldOpen ? -90 : 90} size={13} />
           </button>
         )}
         {oldOpen && (
@@ -253,8 +276,7 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
             {old.map((e) => (
               <div className="cab-wait" key={e.id}>
                 <b>{e.title}</b>
-                <span className="cab-d">{e.status === 'disputed' ? 'You said it’s wrong' : 'Archived'}</span>
-                <span className="cab-act"><Choice kind="restore" label="Bring back" onClick={() => p.onUpdate(e, { status: 'active' })} /></span>
+                <span className="cab-act"><Choice kind="restore" label="Restore" onClick={() => p.onUpdate(e, { status: 'active' })} /></span>
               </div>
             ))}
           </section>

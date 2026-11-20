@@ -45,6 +45,7 @@ export const ICONS: Record<string, string> = {
  "info": "<circle cx=\"12\" cy=\"12\" r=\"8\"/><path d=\"M12 11v5M12 8h.01\"/>",
  "bank": "<path d=\"M3.5 9.5L12 4.5l8.5 5\"/><path d=\"M5.5 10v7M9.5 10v7M14.5 10v7M18.5 10v7M3.5 19.5h17\"/>",
  "idcard": "<rect x=\"3.5\" y=\"5.5\" width=\"17\" height=\"13\" rx=\"2\"/><circle cx=\"9\" cy=\"11\" r=\"2\"/><path d=\"M6 15.5c.6-1.4 1.7-2 3-2s2.4.6 3 2M14.5 10h3.5M14.5 13.5h3.5\"/>",
+ "share": "<path d=\"M12 14.5V3.5M7.5 8L12 3.5 16.5 8\"/><path d=\"M5.5 12.5v7h13v-7\"/>",
  "eyeoff": "<path d=\"M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z\"/><path d=\"M4 4l16 16\"/>"
 };
 

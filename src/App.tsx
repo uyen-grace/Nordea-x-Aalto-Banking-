@@ -3,7 +3,7 @@ import { PhoneFrame } from './components/PhoneFrame.js';
 import { PersonaPickerModal } from './components/PersonaPickerModal.js';
 import { AddGoalModal } from './components/AddGoalModal.js';
 import { Interview } from './components/Interview.js';
-import { KnowsPage } from './components/Cabinet.js';
+import { KnowsPage, applyDecision } from './components/Cabinet.js';
 import { HomePage } from './components/HomePage.js';
 import { PrivacyPage, AutopilotPage, RewardsPage, RedeemSheet, ContactPage, MorePage, DeleteDocSheet, ConfirmSheet } from './components/Pages.js';
 import { Chat } from './components/Chat.js';
@@ -451,7 +451,7 @@ export default function App() {
                 <div className="toast" role="status">
                   <span>{toast.message}</span>
                   {toast.undoToken && (
-                    <button className="btn link" style={{ color: '#F0C25A', marginLeft: 8 }} onClick={() => { undo(toast.undoToken!); setToast(null); }}>
+                    <button className="btn link" style={{ color: '#B9C4FF', marginLeft: 8 }} onClick={() => { undo(toast.undoToken!); setToast(null); }}>
                       Undo
                     </button>
                   )}
@@ -475,6 +475,7 @@ export default function App() {
               onArchive={archive}
               onKeep={(e) => update(e, { status: 'active', confirmedAt: new Date().toISOString() })}
               onInterview={() => setInterview('all')}
+              onDecide={async (e, d) => { const r = await applyDecision(state.user.id, e, d); setToast({ message: r.message, undoToken: r.undoToken }); refresh(); }}
             />
           )}
           {page === 'knows' && (
@@ -492,6 +493,7 @@ export default function App() {
               onDeleteDoc={setDelDocId}
               onChanged={() => refresh()}
               onInterview={(f) => setInterview(f ?? 'all')}
+              onToast={(message, undoToken) => setToast({ message, undoToken })}
             />
           )}
           {page === 'privacy' && (

@@ -6,8 +6,7 @@ import { nfi, ago } from '../ui/format.js';
 import { HELPERS, HELPER_ORDER } from '../ui/helpers.js';
 import { LOGO_WHITE } from '../constants/logos.js';
 import { BAND_BG, RoundActions, NRow, Band, NChev } from './Nordea.js';
-import { Choice } from '../ui/Choice.js';
-import { SourceBadge, WhyLine } from '../ui/Source.js';
+import { Decide, Decision } from '../ui/Decide.js';
 import { interviewFields } from '../ui/profile.js';
 
 interface Props {
@@ -25,6 +24,8 @@ interface Props {
   onKeep: (e: CabinetEntry) => void;
   /** Open the "Get to know you" interview. */
   onInterview: () => void;
+  /** Share / Keep private / Delete (or Keep / Delete for an old goal), same as in What Abel knows. */
+  onDecide: (e: CabinetEntry, d: Decision) => void;
 }
 
 /** Things Nordea noticed that wait for the customer, and old goals that look out of date. */
@@ -80,28 +81,21 @@ export const HomePage: React.FC<Props> = (p) => {
   const card = (e: CabinetEntry) =>
     e.status === 'stale' ? (
       <div className="card" key={e.id}>
-        <SourceBadge origin="you" label="Your goal" />
+        <span className="cab-tag you">Your old goal</span>
         <div>
-          <h3>Is “{e.title}” still a plan?</h3>
-          <p>Its date has passed and no money has been added for a long time.</p>
+          <h3>Still saving for “{e.title}”?</h3>
+          <p>No money added for a long time.</p>
         </div>
-        <div className="btns">
-          <Choice large kind="yes" label="Yes, keep it" onClick={() => p.onKeep(e)} />
-          <Choice large kind="archive" label="No, archive it" onClick={() => p.onArchive(e)} />
-        </div>
+        <Decide options={['keep', 'delete']} onPick={(d) => p.onDecide(e, d)} label={e.title} />
       </div>
     ) : (
       <div className="card" key={e.id}>
-        <SourceBadge e={e} />
+        <span className="cab-tag bank">Nordea noticed</span>
         <div>
           <h3>{e.title}</h3>
           <p>{e.detail.replace(/\s*Is this right\?$/, '')}</p>
-          <WhyLine e={e} />
         </div>
-        <div className="btns">
-          <Choice large kind="yes" label="Yes, that’s right" onClick={() => p.onConfirm(e)} />
-          <Choice large kind="no" label="No, that’s wrong" onClick={() => p.onWrong(e)} />
-        </div>
+        <Decide onPick={(d) => p.onDecide(e, d)} label={e.title} />
       </div>
     );
 

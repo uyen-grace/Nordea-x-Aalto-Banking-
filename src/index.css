@@ -944,3 +944,37 @@ span.cam-x{background:none}
 .iv .mrow.me .mcol{max-width:80%;flex:0 1 auto}
 .iv .bub{overflow-wrap:break-word;width:max-content;max-width:100%}
 .iv .mrow.me .bub{max-width:none}
+
+/* ==== Nordea colours only: Nordea blue, light blue, navy and greys. No green / orange / purple / amber. ==== */
+:root{--nb:#0000A0;--nb-light:#DCEDFF;--nb-navy:#00005E;--nb-grey:#F0F1F5;--nb-grey-ink:#4A4F6A;
+  --you:#0000A0;--you-bg:#DCEDFF;--bank:#0000A0;--bank-bg:#DCEDFF;--reg:#4A4F6A;--reg-bg:#F0F1F5}
+:root[data-theme="dark"]{--nb:#8E98FF;--nb-light:#1E2560;--nb-navy:#C9D0FF;--nb-grey:#1E2242;--nb-grey-ink:#B6BAD9;
+  --you:#C9D0FF;--you-bg:#1E2560;--bank:#C9D0FF;--bank-bg:#1E2560;--reg:#B6BAD9;--reg-bg:#1E2242}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--nb:#8E98FF;--nb-light:#1E2560;--nb-navy:#C9D0FF;--nb-grey:#1E2242;--nb-grey-ink:#B6BAD9;
+  --you:#C9D0FF;--you-bg:#1E2560;--bank:#C9D0FF;--bank-bg:#1E2560;--reg:#B6BAD9;--reg-bg:#1E2242}}
+/* Tags: "Nordea noticed" is solid Nordea blue; the customer's own is light blue; register is grey. */
+.cab-tag{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:4px}
+.cab-tag.bank{background:var(--brand);color:#fff}
+.cab-tag.you{background:var(--nb-light);color:var(--nb-navy)}
+.about-src{border-radius:4px}
+.about-src.src-nordea{background:var(--brand);color:#fff}
+.about-src.src-you,.about-src.src-document{background:var(--nb-light);color:var(--nb-navy)}
+.about-src.src-register{background:var(--nb-grey);color:var(--nb-grey-ink)}
+.cab-n{background:var(--brand);color:#fff}
+.cab-why{color:var(--brand-soft)}
+.cab-why-t{background:var(--nb-light);color:var(--nb-navy)}
+/* Goal status: blue and grey instead of green and orange */
+.npill.up{background:var(--nb-light);color:var(--nb-navy)}
+.npill.down{background:var(--nb-grey);color:var(--nb-grey-ink)}
+.cab-bar i{background:var(--brand-soft)}
+/* Share / Keep private / Delete (src/ui/Decide.tsx) */
+.dec{display:grid;gap:0;margin-top:8px;border:1px solid var(--brand-soft);border-radius:8px;overflow:hidden;width:100%}
+.dec button{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:40px;padding:6px 8px;border:0;border-left:1px solid var(--brand-soft);background:var(--surface);color:var(--brand-soft);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;white-space:nowrap}
+.dec button:first-child{border-left:0}
+.dec button:hover{background:var(--nb-light)}
+.dec button[aria-pressed="true"]{background:var(--brand);color:#fff}
+.dec .dec-delete{color:var(--nb-grey-ink)}
+.dec .dec-delete[aria-pressed="true"]{background:var(--nb-grey-ink);color:#fff}
+.card .dec{margin-top:4px}
+.iv-item .dec{margin-top:8px}
+.card .cab-tag{align-self:flex-start}
