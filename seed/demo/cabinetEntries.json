@@ -218,7 +218,7 @@
   "type": "profile",
   "profileField": "basics",
   "title": "31, lives in Helsinki",
-  "detail": "Age and home municipality",
+  "detail": "",
   "source": "nordea",
   "status": "active",
   "private": false,
@@ -228,9 +228,9 @@
   },
   "provenance": {
    "channel": "register",
-   "register": "Finland’s Population Information System"
+   "register": "Finland’s population register"
   },
-  "why": "Copied when you became a customer and checked once a year.",
+  "why": "From Finland’s population register when you opened your account.",
   "reviewed": true,
   "createdAt": "2026-01-10T09:00:00.000Z",
   "updatedAt": "2026-01-10T09:00:00.000Z",
@@ -241,8 +241,8 @@
   "userId": "lauri",
   "type": "profile",
   "profileField": "life_situation",
-  "title": "Working full-time",
-  "detail": "Same employer for over four years",
+  "title": "Works full-time",
+  "detail": "",
   "source": "nordea",
   "status": "active",
   "private": false,
@@ -252,9 +252,9 @@
   },
   "provenance": {
    "channel": "system",
-   "detectedFrom": "transactions"
+   "detectedFrom": "account opening and transactions"
   },
-  "why": "A salary from the same employer has arrived on the 25th of every month since 2022.",
+  "why": "You told us when you opened your account, and your salary still arrives every month.",
   "reviewed": true,
   "createdAt": "2026-02-01T09:00:00.000Z",
   "updatedAt": "2026-02-01T09:00:00.000Z",
@@ -265,8 +265,8 @@
   "userId": "lauri",
   "type": "profile",
   "profileField": "household",
-  "title": "Lives with my partner Mia",
-  "detail": "We’re planning to buy a flat together",
+  "title": "Lives with partner Mia",
+  "detail": "",
   "source": "customer",
   "status": "active",
   "private": false,
@@ -286,8 +286,8 @@
   "userId": "lauri",
   "type": "profile",
   "profileField": "housing",
-  "title": "Renting",
-  "detail": "About 1 150 € a month",
+  "title": "Rents",
+  "detail": "",
   "source": "nordea",
   "status": "active",
   "private": false,
@@ -299,7 +299,7 @@
    "channel": "system",
    "detectedFrom": "transactions"
   },
-  "why": "A payment of 1 150 € marked “Rent & Housing charge” goes out on the 1st of every month.",
+  "why": "1 150 € rent goes out on the 1st of every month.",
   "reviewed": false,
   "createdAt": "2026-10-02T08:00:00.000Z",
   "updatedAt": "2026-10-02T08:00:00.000Z"
@@ -309,8 +309,8 @@
   "userId": "lauri",
   "type": "profile",
   "profileField": "income",
-  "title": "Steady monthly salary",
-  "detail": "3 900 € a month after the raise in May 2026",
+  "title": "Steady salary",
+  "detail": "",
   "source": "nordea",
   "status": "active",
   "private": false,
@@ -322,7 +322,7 @@
    "channel": "system",
    "detectedFrom": "transactions"
   },
-  "why": "Your salary has arrived on the same day every month; it went from 3 400 € to 3 900 € in May 2026.",
+  "why": "Your salary arrives on the 25th every month.",
   "reviewed": true,
   "createdAt": "2026-06-01T09:00:00.000Z",
   "updatedAt": "2026-06-01T09:00:00.000Z",
@@ -334,7 +334,7 @@
   "type": "profile",
   "profileField": "basics",
   "title": "72, lives in Tampere",
-  "detail": "Age and home municipality",
+  "detail": "",
   "source": "nordea",
   "status": "active",
   "private": false,
@@ -344,9 +344,9 @@
   },
   "provenance": {
    "channel": "register",
-   "register": "Finland’s Population Information System"
+   "register": "Finland’s population register"
   },
-  "why": "Copied when you became a customer and checked once a year.",
+  "why": "From Finland’s population register when you opened your account.",
   "reviewed": true,
   "createdAt": "2025-06-01T09:00:00.000Z",
   "updatedAt": "2025-06-01T09:00:00.000Z",

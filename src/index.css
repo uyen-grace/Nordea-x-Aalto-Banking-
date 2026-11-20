@@ -896,3 +896,51 @@ span.cam-x{background:none}
 .prof-row{align-items:stretch}
 .iv-seg{grid-template-columns:.85fr 1.3fr 1fr}
 .iv-seg button{white-space:nowrap;font-size:12.5px}
+
+/* ---- What Abel knows, simplified (src/components/Cabinet.tsx): About you · Waiting · By you · By Nordea ---- */
+.kn-sub{color:rgba(255,255,255,.82);font-size:13.5px;text-align:center;margin:2px 0 0}
+.nbody.cab{gap:12px}
+.cab-card{background:var(--surface);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.cab-h{display:flex;align-items:center;justify-content:space-between;min-height:32px;margin-bottom:4px}
+.cab-h h2{font-size:16.5px;font-weight:700;margin:0;display:flex;align-items:center;gap:8px;color:var(--ink)}
+.cab-h .btn.link{display:inline-flex;align-items:center;gap:3px;font-size:14px}
+.cab-n{min-width:22px;height:22px;padding:0 7px;border-radius:99px;background:#FFB547;color:#3A2600;font-size:12.5px;font-weight:700;display:inline-grid;place-items:center}
+.cab-empty{margin:0;color:var(--muted);font-size:14px;padding:2px 0 4px}
+/* About you */
+.about-p{font-size:15.5px;line-height:1.55;margin:0;color:var(--ink)}
+.about-list{margin-top:8px}
+.about-row{display:grid;grid-template-columns:80px 1fr auto;gap:8px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+.about-k{font-size:13px;color:var(--muted);font-weight:600}
+.about-v{font-size:14.5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;color:var(--ink)}
+.about-v i{color:var(--muted);font-style:normal}
+.about-src{font-size:11px;font-weight:700;padding:2px 7px;border-radius:99px}
+.about-row .btn.link{font-size:13.5px}
+.about-foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+/* Link-style toggles */
+.cab-more,.cab-why,.cab-old{border:0;background:none;padding:4px 0;font:inherit;font-size:13.5px;font-weight:600;display:inline-flex;align-items:center;gap:4px;cursor:pointer;color:var(--brand-soft);align-self:flex-start}
+.cab-why{color:var(--bank);font-size:13px;padding:2px 0}
+.cab-why-t{margin:2px 0 4px;font-size:13px;line-height:1.45;color:var(--ink-2);padding:8px 10px;background:var(--bank-bg);border-radius:8px}
+.cab-old{align-self:center;color:var(--muted)}
+/* Waiting for you */
+.cab-wait{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:12px 0;border-top:1px solid var(--line)}
+.cab-h + .cab-wait,.cab-h + .cab-empty + .cab-wait{border-top:0;padding-top:4px}
+.cab-wait b{font-size:15px;color:var(--ink)}
+.cab-d{font-size:13.5px;color:var(--ink-2)}
+.cab-tag{display:inline-flex;gap:4px;align-items:center;font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:99px}
+.cab-tag.bank{color:var(--bank);background:var(--bank-bg)}.cab-tag.you{color:var(--you);background:var(--you-bg)}
+.cab-act{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;width:100%}
+.cab-act .hist-l{width:100%}
+/* Items */
+.cab-item{border-top:1px solid var(--line);padding:2px 0 6px}
+.cab-h + .cab-item,.cab-h + .cab-empty + .cab-item{border-top:0}
+.cab-row{width:100%;display:flex;align-items:center;gap:10px;background:none;border:0;padding:8px 0 2px;text-align:left;cursor:pointer;color:var(--ink);font:inherit}
+.cab-row>svg{flex:none;color:var(--muted)}
+.cab-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.cab-t b{font-size:15px;display:inline-flex;gap:6px;align-items:center}
+.cab-t>span{font-size:13.5px;color:var(--ink-2)}
+.cab-lock{color:var(--muted)}
+.cab-bar{height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden;margin-top:5px;display:block}
+.cab-bar i{display:block;height:100%;background:var(--brand-soft)}
+.iv .mrow.me .mcol{max-width:80%;flex:0 1 auto}
+.iv .bub{overflow-wrap:break-word;width:max-content;max-width:100%}
+.iv .mrow.me .bub{max-width:none}

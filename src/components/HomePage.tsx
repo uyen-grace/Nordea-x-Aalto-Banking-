@@ -149,7 +149,7 @@ export const HomePage: React.FC<Props> = (p) => {
 
         {interviewFields(state.entries).length > 0 && (
           <div className="ncard iv-cta">
-            <span className="t"><b>Help Abel get to know you</b><span>{interviewFields(state.entries).length} quick questions so Abel’s answers fit your life. You approve every answer.</span></span>
+            <span className="t"><b>Help Abel get to know you</b><span>{interviewFields(state.entries).length} quick questions</span></span>
             <button className="btn small primary" onClick={p.onInterview}>Start</button>
           </div>
         )}

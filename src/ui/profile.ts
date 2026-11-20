@@ -22,3 +22,19 @@ export function interviewFields(entries: CabinetEntry[], max = 5): ProfileField[
   const toConfirm = askable.filter((f) => isUnconfirmed(profileEntryFor(entries, f.key))).map((f) => f.key);
   return [...empty, ...toConfirm].slice(0, max);
 }
+
+/** Fields nobody has filled yet (Nordea's unconfirmed guesses don't count as empty: they wait for a yes). */
+export const emptyFields = (entries: CabinetEntry[]): ProfileField[] =>
+  PROFILE_FIELDS.filter((f) => f.question && !profileEntryFor(entries, f.key)).map((f) => f.key);
+
+/** About you as one short paragraph, like Claude's memory: "Lauri, 31, lives in Helsinki. Works full-time. …"
+ *  Only what Abel may use: the customer's own answers and what they confirmed. */
+export function aboutParagraph(name: string, entries: CabinetEntry[]): string {
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  return PROFILE_FIELDS.map((f) => {
+    const e = profileEntryFor(entries, f.key);
+    if (!e || isUnconfirmed(e)) return '';
+    const t = e.title.trim().replace(/[.!]+$/, '');
+    return f.key === 'basics' ? `${name}, ${t}.` : `${cap(t)}.`;
+  }).filter(Boolean).join(' ');
+}
