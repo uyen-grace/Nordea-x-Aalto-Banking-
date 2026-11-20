@@ -10,7 +10,8 @@
     "life_event",
     "preference",
     "fact",
-    "observation"
+    "observation",
+    "profile"
   ],
   "neverRead": [
     "unconsented_private",

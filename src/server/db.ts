@@ -199,6 +199,7 @@ const cmToEntry = (userId: string, e: ArchEntry): CabinetEntry => {
       : {}),
     reviewed: doc?.reviewed ?? true,
     ...(doc?.goalType ? { goalType: doc.goalType } : {}),
+    ...(doc?.profileField ? { profileField: doc.profileField } : {}),
     ...(doc?.confirmedAt ? { confirmedAt: doc.confirmedAt } : {}),
     createdAt: e.createdAt,
     updatedAt: doc?.updatedAt ?? e.createdAt,

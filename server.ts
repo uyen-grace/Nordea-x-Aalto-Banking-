@@ -7,6 +7,7 @@ import { db } from './src/server/db.js';
 import { readCabinetThroughGateway } from './src/server/accessGateway.js';
 import { getAllAgents, getAgentManifest } from './src/server/agentRegistry.js';
 import { CabinetEntry, UndoRecord } from './src/types.js';
+import { isProfileField } from './src/profileFields.js';
 import { failClosedRoutes } from './src/server/failClosedRoutes.js';
 import { customerIdRejection } from './src/server/customerId.js';
 import { registerV14Routes } from './src/server/routes.js';
@@ -166,11 +167,15 @@ app.get('/api/cabinet', (req, res) => {
 });
 
 app.post('/api/cabinet', (req, res) => {
-  const { userId, type, title, detail, source, target, private: isPrivate, goalType, readableBy } = req.body;
+  const { userId, type, title, detail, source, target, private: isPrivate, goalType, readableBy, profileField, how } = req.body;
 
   if (!userId || !title) {
     return res.status(400).json({ error: 'userId and title are required' });
   }
+  // The app only adds what a customer can add themselves. (Nordea's observations come from its own data.)
+  const APP_TYPES = ['goal', 'life_event', 'preference', 'fact', 'profile'];
+  if (type && !APP_TYPES.includes(type)) return res.status(400).json({ error: `type must be one of ${APP_TYPES.join(', ')}` });
+  if (type === 'profile' && !isProfileField(profileField)) return res.status(400).json({ error: 'A profile entry needs a valid profileField' });
 
   const id = `entry-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
   const now = new Date().toISOString();
@@ -188,12 +193,13 @@ app.post('/api/cabinet', (req, res) => {
     provenance: { channel: 'app' },
     target: target || undefined,
     goalType: goalType || undefined,
+    ...(type === 'profile' ? { profileField } : {}),
     reviewed: true,
     createdAt: now,
     updatedAt: now,
   };
 
-  db.addCabinetEntry(newEntry, { by: 'you', how: 'In the app' });
+  db.addCabinetEntry(newEntry, { by: 'you', how: typeof how === 'string' && how.length <= 60 ? how : 'In the app' });
 
   // Generate undo token
   const undoToken = `undo-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -269,7 +275,7 @@ app.delete('/api/cabinet/:id', (req, res) => {
   res.json({
     entry: archived,
     undoToken,
-    message: 'Removed. It’s kept in your history.',
+    message: 'Archived. You can bring it back any time.',
   });
 });
 

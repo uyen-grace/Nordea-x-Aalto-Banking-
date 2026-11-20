@@ -2,11 +2,12 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { PhoneFrame } from './components/PhoneFrame.js';
 import { PersonaPickerModal } from './components/PersonaPickerModal.js';
 import { AddGoalModal } from './components/AddGoalModal.js';
+import { Interview } from './components/Interview.js';
 import { HomePage } from './components/HomePage.js';
 import { KnowsPage, PrivacyPage, AutopilotPage, RewardsPage, RedeemSheet, ContactPage, MorePage, DeleteDocSheet, ConfirmSheet } from './components/Pages.js';
 import { Chat } from './components/Chat.js';
 import { Icon } from './ui/icons.js';
-import { CabinetEntry, ChatMessage, PersonaId, User } from './types.js';
+import { CabinetEntry, ChatMessage, PersonaId, ProfileField, User } from './types.js';
 import {
   AppState,
   fetchState,
@@ -56,6 +57,8 @@ export default function App() {
   const [toast, setToast] = useState<{ message: string; undoToken?: string } | null>(null);
   const [usersOpen, setUsersOpen] = useState(false);
   const [addGoalOpen, setAddGoalOpen] = useState(false);
+  // "Get to know you": closed (null), all gaps ('all'), or one field.
+  const [interview, setInterview] = useState<ProfileField | 'all' | null>(null);
   const [error, setError] = useState<string | null>(null);
   // The app ships with no data: until some is loaded (scripts/load_data.py) it shows "No data yet".
   const [noData, setNoData] = useState(false);
@@ -414,6 +417,16 @@ export default function App() {
                 onSelectPersona={(p) => { setPersonaId(p); setUsersOpen(false); setChatOpen(false); setPage('home'); }}
                 onResetDatabase={async () => { await resetDatabase(); setUsersOpen(false); setChatOpen(false); refresh(); setToast({ message: 'Demo data reset' }); }}
               />
+              {interview && (
+                <Interview
+                  userId={state.user.id}
+                  userName={state.user.name}
+                  entries={state.entries}
+                  only={interview === 'all' ? undefined : interview}
+                  onClose={() => setInterview(null)}
+                  onSaved={(m) => { setInterview(null); setToast({ message: m }); refresh(); }}
+                />
+              )}
               <AddGoalModal
                 isOpen={addGoalOpen}
                 onClose={() => setAddGoalOpen(false)}
@@ -460,6 +473,7 @@ export default function App() {
               onWrong={(e) => update(e, { status: 'disputed' })}
               onArchive={archive}
               onKeep={(e) => update(e, { status: 'active', confirmedAt: new Date().toISOString() })}
+              onInterview={() => setInterview('all')}
             />
           )}
           {page === 'knows' && (
@@ -476,6 +490,7 @@ export default function App() {
               onKeep={(e) => update(e, { status: 'active', confirmedAt: new Date().toISOString() })}
               onDeleteDoc={setDelDocId}
               onChanged={() => refresh()}
+              onInterview={(f) => setInterview(f ?? 'all')}
             />
           )}
           {page === 'privacy' && (

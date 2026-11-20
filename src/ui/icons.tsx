@@ -42,7 +42,10 @@ export const ICONS: Record<string, string> = {
  "lock": "<rect x=\"5\" y=\"10.5\" width=\"14\" height=\"9.5\" rx=\"2\"/><path d=\"M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5\"/>",
  "archive": "<rect x=\"3.5\" y=\"4.5\" width=\"17\" height=\"4.5\" rx=\"1\"/><path d=\"M5 9v10.5h14V9M10 13h4\"/>",
  "undo": "<path d=\"M9 7L4.5 11.5 9 16\"/><path d=\"M4.5 11.5H14a5.5 5.5 0 0 1 0 11h-2\"/>",
- "info": "<circle cx=\"12\" cy=\"12\" r=\"8\"/><path d=\"M12 11v5M12 8h.01\"/>"
+ "info": "<circle cx=\"12\" cy=\"12\" r=\"8\"/><path d=\"M12 11v5M12 8h.01\"/>",
+ "bank": "<path d=\"M3.5 9.5L12 4.5l8.5 5\"/><path d=\"M5.5 10v7M9.5 10v7M14.5 10v7M18.5 10v7M3.5 19.5h17\"/>",
+ "idcard": "<rect x=\"3.5\" y=\"5.5\" width=\"17\" height=\"13\" rx=\"2\"/><circle cx=\"9\" cy=\"11\" r=\"2\"/><path d=\"M6 15.5c.6-1.4 1.7-2 3-2s2.4.6 3 2M14.5 10h3.5M14.5 13.5h3.5\"/>",
+ "eyeoff": "<path d=\"M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z\"/><path d=\"M4 4l16 16\"/>"
 };
 
 export const Icon: React.FC<{ name: string; size?: number; className?: string; strokeWidth?: number }> = ({ name, size = 18, className, strokeWidth = 2 }) => (

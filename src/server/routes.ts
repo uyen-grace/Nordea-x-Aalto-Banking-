@@ -61,6 +61,7 @@ function entryFromDraft(userId: string, d: any, extra: Partial<CabinetEntry> = {
   return {
     id: id('entry'), userId, type: d.type, title: d.title, detail: d.detail || '', source: 'customer', status: 'active', private: false,
     readableBy: { abel: true, offers: false }, provenance: { channel: 'app' }, target: d.target, goalType: d.goalType,
+    ...(d.type === 'profile' && d.profileField ? { profileField: d.profileField } : {}),
     reviewed: true, confirmedAt: now(), createdAt: now(), updatedAt: now(), ...extra,
   };
 }
@@ -663,7 +664,8 @@ export function registerV14Routes(app: Express) {
     const u = db.getUser(userId)!;
     db.updateUser(userId, { points: (u.points || 0) + 10 });
     // Only a salary (or pension) change gets Abel's follow-up. ("New regular payment: …" is not one.)
-    if (!(e.id.endsWith('-obs-salary') || /\b(salary|pension)\b/i.test(e.title))) return res.json({ entry: db.getCabinetEntry(e.id) });
+    // (A profile field like "Steady monthly salary" is not a salary change.)
+    if (e.type === 'profile' || !(e.id.endsWith('-obs-salary') || /\b(salary|pension)\b/i.test(e.title))) return res.json({ entry: db.getCabinetEntry(e.id) });
     const sal = fin.salaryInfo(userId);
     const acc = fin.accounts(userId)!;
     const goal = fin.primaryGoal(userId);

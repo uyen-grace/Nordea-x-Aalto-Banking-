@@ -6,6 +6,11 @@ import { nfi, eur, monthLong, monthShort, n0, dayMonth } from '../ui/format.js';
 import { DetailHead, NRow, Band, Toggle, RoundActions, BAND_BG } from './Nordea.js';
 import { HistoryCard } from './HomePage.js';
 import { Choice } from '../ui/Choice.js';
+import { SourceBadge, WhyLine } from '../ui/Source.js';
+import { OriginFilter, matchesFilter } from '../entrySource.js';
+import { PROFILE_FIELDS } from '../profileFields.js';
+import { profileEntryFor, interviewFields, isUnconfirmed } from '../ui/profile.js';
+import { ProfileField } from '../types.js';
 
 // ---------------- What Abel knows ----------------
 const DRAWERS: { name: string; has: (e: CabinetEntry) => boolean; icon: string }[] = [
@@ -13,6 +18,7 @@ const DRAWERS: { name: string; has: (e: CabinetEntry) => boolean; icon: string }
   { name: 'Life', has: (e) => e.type === 'life_event', icon: '<path d="M3 11l9-7 9 7v9H3z"/>' },
   { name: 'Money', has: (e) => e.type === 'observation' || e.type === 'fact', icon: '<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>' },
   { name: 'Preferences', has: (e) => e.type === 'preference', icon: '<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>' },
+  { name: 'About you: marked wrong', has: (e) => e.type === 'profile', icon: '<circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c.8-3.6 3.7-5.5 7-5.5s6.2 1.9 7 5.5"/>' },
   { name: 'Not shared', has: (e) => e.type === 'blind_spot', icon: '<path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><path d="M4 4l16 16"/>' },
 ];
 
@@ -32,6 +38,8 @@ interface KnowsProps {
   onDeleteDoc: (id: string) => void;
   /** v20: something was saved from the pipeline: reload the app state. */
   onChanged?: () => void;
+  /** Open the "Get to know you" interview (all gaps, or one field). */
+  onInterview: (only?: ProfileField) => void;
 }
 
 // ---------------- History of one entry ----------------
@@ -89,21 +97,20 @@ function seenLine(e: CabinetEntry): string {
 
 const ItemRow: React.FC<{ e: CabinetEntry; open: boolean; onMenu: () => void; whyOpen: boolean; onWhy: () => void } & Pick<KnowsProps, 'onUpdate' | 'onArchive'>> = ({ e, open, onMenu, whyOpen, onWhy, onUpdate, onArchive }) => {
   const [hist, setHist] = useState(false);
-  const c = e.type === 'blind_spot' ? 'grey' : e.source === 'nordea' ? 'bank' : 'you';
   const meta =
     e.status === 'archived' ? 'Archived · kept in history' : e.status === 'stale' ? 'Looks out of date' : e.private ? 'Private · never used for offers' : e.source === 'document' ? 'From a document you imported' : '';
   return (
     <div className="row">
       <div className="row-main">
-        <span className={`dotc ${c}`} />
         <div className="row-txt">
           <h4>{e.title}</h4>
           {e.detail && <p className={open ? '' : 'clamp1'}>{e.detail}</p>}
+          <SourceBadge e={e} />
           {(meta || seenLine(e)) && <span className={`meta${seenLine(e).startsWith('Not used') ? ' warn' : ''}`}>{[meta, seenLine(e)].filter(Boolean).join(' · ')}</span>}
+          {e.status !== 'archived' && <WhyLine e={e} />}
         </div>
         <button className="more" onClick={onMenu} aria-expanded={open} aria-label={`Options for ${e.title}`}>{open ? '×' : '⋯'}</button>
       </div>
-      {open && whyOpen && e.why && <p className="why">{e.why}</p>}
       {open && (
         <div className="row-opts">
           {e.status === 'archived' ? (
@@ -117,7 +124,6 @@ const ItemRow: React.FC<{ e: CabinetEntry; open: boolean; onMenu: () => void; wh
             <>
               {e.source === 'nordea' && e.type !== 'blind_spot' && <Choice kind="no" label="That’s wrong" onClick={() => onUpdate(e, { status: 'disputed' })} />}
               {e.type !== 'blind_spot' && <Choice kind="archive" label="Archive" onClick={() => onArchive(e)} />}
-              {e.why && <Choice kind="more" label={whyOpen ? 'Hide' : 'How do we know?'} expanded={whyOpen} onClick={onWhy} />}
               <Choice kind="more" label={hist ? 'Hide history' : 'History'} expanded={hist} onClick={() => setHist(!hist)} />
               {e.type !== 'blind_spot' && (
                 <div className="perm-row" style={{ width: '100%' }}>
@@ -185,7 +191,7 @@ const PipelineWaiting: React.FC<{ items: PipeItem[]; onDecide: (id: string, a: '
         {shown.map((c) => (
           <div className="nrow2 static wait" key={c.id}>
             <span className="n-l">
-              <span className="n-name"><span className="dotc you" />{c.title}</span>
+              <span className="n-name">{c.title}</span>
               {c.detail && c.detail !== c.title && <span className="n-sub">{c.detail}</span>}
               <span className="n-sub"><span className="src-chip">{SOURCE_NAME[c.source]}</span> {c.filter === 'private' ? 'Looks private, so we suggest saving it privately' : `Why it’s here: ${c.reason}`}</span>
               <span className="wait-act">
@@ -230,6 +236,58 @@ const DocsSection: React.FC<{ userId: string; docs: DocInfo[]; onDelete: (id: st
   </>
 );
 
+/** About you: the basic picture of who the customer is. One row per field, each with where it came from. */
+const ProfileSection: React.FC<{ entries: CabinetEntry[]; filter: OriginFilter; onInterview: (only?: ProfileField) => void; onConfirm: (e: CabinetEntry) => void }> = ({ entries, filter, onInterview, onConfirm }) => {
+  const gaps = interviewFields(entries).length;
+  const rows = PROFILE_FIELDS.map((f) => ({ f, e: profileEntryFor(entries, f.key) }))
+    // Empty fields are the customer's to fill, so "From Nordea" hides them.
+    .filter(({ e }) => (e ? matchesFilter(e, filter) : filter !== 'nordea'));
+  return (
+    <>
+      <Band left="About you" right={<span className="band-note">Helps Abel give answers that fit you</span>} />
+      <div className="ncard flat">
+        {filter !== 'nordea' && gaps > 0 && (
+          <div className="iv-cta" style={{ margin: 12 }}>
+            <span className="t"><b>Help Abel get to know you</b><span>{gaps === 1 ? '1 quick question' : `${gaps} quick questions`} · about a minute · you approve every answer</span></span>
+            <button className="btn small primary" onClick={() => onInterview()}>Start</button>
+          </div>
+        )}
+        {rows.length === 0 && <div className="nrow2 static"><span className="n-l"><span className="n-sub">Nothing here from Nordea.</span></span></div>}
+        <div className="prof">
+          {rows.map(({ f, e }) => (
+            <div className="prof-row" key={f.key}>
+              <span className="prof-h">
+                <span className="prof-k">{f.label}</span>
+                {f.question && !isUnconfirmed(e) && <button className="btn link prof-edit" onClick={() => onInterview(f.key)}>{e ? 'Change' : 'Add'}</button>}
+              </span>
+              {e ? (
+                <span className="prof-v">
+                  <b>{e.title}</b>
+                  {e.detail && <span className="sub">{e.detail}</span>}
+                  <SourceBadge e={e} />
+                  {e.private && <span className="sub">🔒 Private: never used for offers or shared with an adviser</span>}
+                  <WhyLine e={e} />
+                  {isUnconfirmed(e) && (
+                    <>
+                      <span className="sub">Abel won’t use this until you say it’s right.</span>
+                      <span className="wait-act">
+                        <Choice kind="yes" label="Yes, that’s right" onClick={() => onConfirm(e)} />
+                        <Choice kind="no" label="No, change it" onClick={() => onInterview(f.key)} />
+                      </span>
+                    </>
+                  )}
+                </span>
+              ) : (
+                <span className="prof-v empty"><b>Not filled in yet</b></span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+};
+
 export const KnowsPage: React.FC<KnowsProps> = (p) => {
   const { state } = p;
   const [menu, setMenu] = useState<string | null>(null);
@@ -238,12 +296,17 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
   const [goalHist, setGoalHist] = useState<string | null>(null);
   const active = state.entries.filter((e) => e.status !== 'archived');
   const tracked = new Set(state.goals.map((g) => g.goalId));
-  const listed = active.filter((e) => !tracked.has(e.id));
-  const hasBlind = active.some((e) => e.type === 'blind_spot');
+  // About you shows each field's current answer; a Nordea guess the customer marked wrong is listed below instead,
+  // so it stays visible (and can be brought back) rather than disappearing.
+  const listed = active.filter((e) => !tracked.has(e.id) && (e.type !== 'profile' || e.status === 'disputed'));
   const removed = state.entries.filter((e) => e.status === 'archived');
   // Waiting for the customer: what Nordea noticed (not used until confirmed) and goals that look out of date.
   // (Something marked wrong isn't waiting any more: it moves down, labelled "Not used: you said it's wrong".)
-  const waiting = active.filter((e) => e.source === 'nordea' && !e.reviewed && e.status === 'active' && e.type !== 'blind_spot');
+  const waiting = active.filter((e) => e.source === 'nordea' && !e.reviewed && e.status === 'active' && e.type !== 'blind_spot' && e.type !== 'profile');
+  // Nordea's guesses in About you that still need a yes (shown there, counted here).
+  const profileWaiting = PROFILE_FIELDS.filter((f) => isUnconfirmed(profileEntryFor(state.entries, f.key))).length;
+  const [filter, setFilter] = useState<OriginFilter>('all');
+  const countOf = (f: OriginFilter) => active.filter((e) => e.type !== 'blind_spot' && matchesFilter(e, f)).length;
   const staleGoals = active.filter((e) => e.type === 'goal' && e.status === 'stale' && !tracked.has(e.id));
   const inUse = state.readable.abel;
   // Not shared: everything Abel can't read, except what's only waiting for a confirm. (An out-of-date goal Abel
@@ -272,7 +335,7 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
         </div>
         <div className="kn-sum">
           <div><b>{inUse}</b><span>In use</span></div>
-          <div className={waiting.length + staleGoals.length + approvals.length + pipe.length ? 'hl' : ''}><b>{waiting.length + staleGoals.length + approvals.length + pipe.length}</b><span>Waiting for you</span></div>
+          <div className={waiting.length + profileWaiting + staleGoals.length + approvals.length + pipe.length ? 'hl' : ''}><b>{waiting.length + profileWaiting + staleGoals.length + approvals.length + pipe.length}</b><span>Waiting for you</span></div>
           <div><b>{notShared}</b><span>Not shared</span></div>
         </div>
         <RoundActions actions={[
@@ -282,21 +345,27 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
         ]} />
       </header>
       <div className="nbody">
-        {waiting.length > 0 && (
+        <div className="src-filter" role="group" aria-label="Show">
+          {([['all', 'All'], ['mine', 'Added by you'], ['nordea', 'From Nordea']] as [OriginFilter, string][]).map(([k, label]) => (
+            <button key={k} aria-pressed={filter === k} onClick={() => setFilter(k)}>{label} <span className="cnt">{countOf(k)}</span></button>
+          ))}
+        </div>
+        <ProfileSection entries={state.entries} filter={filter} onInterview={p.onInterview} onConfirm={p.onConfirm} />
+        {filter !== 'mine' && waiting.length > 0 && (
           <>
             <Band left="Waiting for you" right={<span className="band-note">Not used until you confirm</span>} />
             <div className="ncard flat">
               {shownWaiting.map((e) => (
                 <div className="nrow2 static wait" key={e.id}>
                   <span className="n-l">
-                    <span className="n-name"><span className="dotc bank" />{e.title}</span>
+                    <span className="n-name">{e.title}</span>
                     {e.detail && <span className="n-sub">{e.detail}</span>}
+                    <SourceBadge e={e} />
+                    <WhyLine e={e} />
                     <span className="wait-act">
                       <Choice kind="yes" label="Yes, that’s right" onClick={() => p.onConfirm(e)} />
                       <Choice kind="no" label="No, that’s wrong" onClick={() => p.onUpdate(e, { status: 'disputed' })} />
-                      {e.why && <Choice kind="more" label={why === e.id ? 'Hide' : 'How do we know?'} expanded={why === e.id} onClick={() => setWhy(why === e.id ? null : e.id)} />}
                     </span>
-                    {why === e.id && e.why && <span className="n-sub why-l">{e.why}</span>}
                   </span>
                 </div>
               ))}
@@ -304,10 +373,10 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
             </div>
           </>
         )}
-        <PipelineWaiting items={pipe} onDecide={decidePipe} />
-        <ApprovalWaiting cards={approvals} onDecide={decideApproval} />
-        <Band left="Goals" right={state.goals.length + staleGoals.length} />
-        {state.goals.length || staleGoals.length ? (
+        {filter !== 'nordea' && <PipelineWaiting items={pipe} onDecide={decidePipe} />}
+        {filter !== 'nordea' && <ApprovalWaiting cards={approvals} onDecide={decideApproval} />}
+        {filter !== 'nordea' && <Band left="Goals" right={state.goals.length + staleGoals.length} />}
+        {filter === 'nordea' ? null : state.goals.length || staleGoals.length ? (
           <div className="ncard flat">
             {state.goals.map((g) => (
               <React.Fragment key={g.goalId}>
@@ -363,10 +432,9 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
         <div className="embed">
           <div className="body">
             <div className="sec-title"><h2>Everything else</h2></div>
-            <div className="legend"><span className="from you">You told us</span><span className="from bank">Nordea noticed</span>{hasBlind && <span className="from grey">Not shared</span>}</div>
-            {listedRest.length === 0 && <div className="card"><p>Nothing else yet. Tell Abel about plans or changes in your life.</p></div>}
+            {listedRest.filter((e) => matchesFilter(e, filter)).length === 0 && <div className="card"><p>{filter === 'nordea' ? 'Nothing else from Nordea.' : 'Nothing else yet. Tell Abel about plans or changes in your life.'}</p></div>}
             {DRAWERS.map((dw) => {
-              const items = listedRest.filter(dw.has);
+              const items = listedRest.filter(dw.has).filter((e) => matchesFilter(e, filter)); // "Not shared" items only show under All
               if (!items.length) return null;
               return (
                 <div className="drawer" key={dw.name}>
@@ -383,12 +451,12 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
                 </div>
               );
             })}
-            <DocsSection userId={state.user.id} docs={state.documents || []} onDelete={p.onDeleteDoc} />
-            {removed.length > 0 && (
+            {filter !== 'nordea' && <DocsSection userId={state.user.id} docs={state.documents || []} onDelete={p.onDeleteDoc} />}
+            {removed.filter((e) => matchesFilter(e, filter)).length > 0 && (
               <>
                 <div className="sec-title"><h2>Archived</h2><span className="kicker">kept in history</span></div>
                 <div className="list">
-                  {removed.map((e) => (
+                  {removed.filter((e) => matchesFilter(e, filter)).map((e) => (
                     <ItemRow key={e.id} e={e} open={menu === e.id} onMenu={() => { setMenu(menu === e.id ? null : e.id); setWhy(null); }} whyOpen={false} onWhy={() => {}} onUpdate={p.onUpdate} onArchive={p.onArchive} />
                   ))}
                 </div>

@@ -4,6 +4,7 @@
 import * as fin from './finance.js';
 import { db } from './db.js';
 import { CabinetEntry, MessageCard } from '../types.js';
+import { originOf } from '../entrySource.js';
 
 const eur = (n: number) => Number(Math.round(n)).toLocaleString('fi-FI').replace(/ /g, ' ') + ' €';
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -82,17 +83,25 @@ export function offlineAnswer(userId: string, text: string, allowed: CabinetEntr
     if (!goals.length) return { text: 'You don’t have a goal with an amount and a date yet. Tell me what you’re saving for and by when, and I’ll track it with you.', suggestions: ['Help me set a savings goal'], usedEntryIds: [], topic: 'goals' };
     const parts = goals.slice(0, 3).map((g) => {
       const s = fin.goalStatus(userId, g);
+      // Say where it comes from: the customer set the goal; the numbers are their account.
       return s.onTrack
-        ? `“${s.title}”: ${eur(s.saved)} of ${eur(s.target)}. You’re on track for ${month(s.targetDate)} 🎉`
-        : `“${s.title}”: ${eur(s.saved)} of ${eur(s.target)}. At ${eur(s.monthlyGoingIn)} a month you’d have about ${eur(s.projectedByTargetDate)} by ${month(s.targetDate)}, so about ${eur(s.shortBy)} short. About ${eur(s.extraPerMonthNeeded)} more a month would get you there.`;
+        ? `“${s.title}” (the goal you set): ${eur(s.saved)} of ${eur(s.target)}. You’re on track for ${month(s.targetDate)} 🎉`
+        : `“${s.title}” (the goal you set): ${eur(s.saved)} of ${eur(s.target)}. At ${eur(s.monthlyGoingIn)} a month you’d have about ${eur(s.projectedByTargetDate)} by ${month(s.targetDate)}, so about ${eur(s.shortBy)} short. About ${eur(s.extraPerMonthNeeded)} more a month would get you there.`;
     });
     const plan = fin.payPlan(userId);
     const first = fin.goalStatus(userId, goals[0]);
     const offer = !first.onTrack && plan.suggestedExtraMove > 0;
+    // What Nordea noticed (and the customer confirmed), named as Nordea's: a raise that hasn't reached savings yet.
+    const raise = allowed.find((e) => originOf(e) === 'nordea' && /salary/i.test(e.title));
+    const sal = raise ? fin.salaryInfo(userId) : undefined;
+    if (raise && sal?.found && sal.changed && sal.difference > 0) {
+      parts.push(`Nordea noticed your salary went up by ${eur(sal.difference)} a month, but your saving is still ${eur(plan.alreadySavingPerMonth)} a month. That raise is room to catch up.`);
+    }
+    const used = [...goals.slice(0, 3).map((g) => g.id), ...(raise ? [raise.id] : [])];
     return {
       text: parts.join('\n\n') + (offer ? `\n\nWant to move ${eur(plan.suggestedExtraMove)} more each payday?` : ''),
       suggestions: offer ? [] : ['Plan my next payday', 'Where does my money go?'],
-      usedEntryIds: goals.slice(0, 3).map((g) => g.id),
+      usedEntryIds: used,
       topic: 'goals',
       actions: offer ? [{ name: 'offerTransfer', args: { amountPerMonth: plan.suggestedExtraMove } }] : [],
     };

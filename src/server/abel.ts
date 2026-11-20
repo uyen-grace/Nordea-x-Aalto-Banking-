@@ -19,6 +19,8 @@ import { getAllPartners, getPartner } from './partnerRegistry.js';
 import * as fin from './finance.js';
 import { getProvider, ToolDecl, ToolCall, Turn, lastErrorText, recordTurn, isBusy } from './llm.js';
 import { CabinetEntry, ChatMessage, MessageCard, UndoRecord } from '../types.js';
+import { originOf, ORIGIN_SAY } from '../entrySource.js';
+import { PROFILE_FIELDS, PROFILE_FIELD, isProfileField } from '../profileFields.js';
 import { findSimilar, compare } from './similar.js';
 import { kvReplyIn, looksLikeCode } from './replyParse.js';
 import { offlineAnswer } from './abelOffline.js';
@@ -114,7 +116,8 @@ const ALL_TOOLS: ToolDecl[] = [
       properties: {
         action: { type: 'string', enum: ['add', 'update', 'archive'] },
         entryId: { type: 'string', description: 'For update/archive' },
-        type: { type: 'string', enum: ['goal', 'life_event', 'preference', 'fact'] },
+        type: { type: 'string', enum: ['goal', 'life_event', 'preference', 'fact', 'profile'] },
+        profileField: { type: 'string', enum: PROFILE_FIELDS.filter((f) => f.question).map((f) => f.key), description: 'For type profile: which About you field (life situation, household, housing, income, ambition, risk)' },
         title: { type: 'string' },
         detail: { type: 'string' },
         targetAmount: { type: 'number', description: 'Goals: euros' },
@@ -184,7 +187,9 @@ function systemPrompt(userId: string, helperId: string, cabinet: CabinetEntry[],
     type: e.type,
     title: e.title,
     detail: e.detail,
-    from: e.source === 'nordea' ? 'nordea' : e.source === 'document' ? 'document' : 'customer',
+    from: originOf(e) === 'you' ? 'customer' : originOf(e),
+    sayAs: ORIGIN_SAY[originOf(e)] || undefined,
+    ...(e.type === 'profile' && e.profileField ? { aboutYou: PROFILE_FIELD[e.profileField]?.label } : {}),
     added: e.createdAt.slice(0, 10),
     status: e.status === 'active' ? undefined : e.status,
     target: e.target,
@@ -210,6 +215,8 @@ ${shared.sharedContext}
 HOW YOU TALK
 - Warm, brief, plain English, like a caring person texting. Acknowledge feelings first. At most one question; ask if unclear.
 - Use the cabinet naturally, never recite it. Small talk: one or two sentences.
+- Say where a fact came from when you use it, in a few plain words, using its "sayAs": "you told me you're saving for a flat", "Nordea noticed your salary went up", "the population register shows you live in Helsinki". Once per fact, never as a list, never for FACTS figures (those are just "your account").
+- Items with type "profile" are the customer's About you (life situation, household, housing, income, ambitions, risk). Let them shape every answer, e.g. a student gets student-sized advice, someone who wants to keep it safe never gets stock tips.
 - Money: 12 000 € (whole euros, or 1 420,50 € if cents matter). Plain text: no markdown, no tables, no JSON, no suggestion lists (quick replies go in suggestions). For a plan over many months, summarise it in a few sentences.
 - Never show ids. When they name something ("the salary one"), find it yourself (newest = latest "added").
 - You can't browse, give live rates or forecasts, or move money. Unhappy customer: apologise, repair, offer a person.${calm ? '\n- CALM view: very short warm sentences, at most two suggestions, always offer a person.' : ''}
@@ -217,7 +224,7 @@ HOW YOU TALK
 RULES
 - Numbers only from FACTS, the cabinet, this chat or a tool result, or simple maths on them (show the sum briefly). In goals, monthlyGoingIn is what goes in now; extraPerMonthNeeded is what's missing on top. FACTS cover balances, salary, 3-month spending, goals and the payday plan; call a tool only for anything else (another period, whether an amount is affordable).
 - One step: finishReply, plus any action tool in the same step.
-- Save meaningful context quietly with proposeCabinetChange (goals with amount/date, life events, preferences, facts); never small talk or complaints. Remove by name: action "archive" with its entryId (up to 3). Never "delete everything": point to "Abel knows".
+- Save meaningful context quietly with proposeCabinetChange (goals with amount/date, life events, preferences, facts); never small talk or complaints. When they tell you something about who they are (started studying, moved in with someone, now own a home, new job), save it as type "profile" with its profileField: it replaces that About you field. Remove by name: action "archive" with its entryId (up to 3). Never "delete everything": point to "Abel knows".
 - Sensitive (health, pregnancy, mental health, relationship problems): sensitive=true; it isn't saved unless the customer taps, so never say you saved or noted it. A wedding or honeymoon is not sensitive.
 - Passed goal dates: ask if still a plan.
 - Partner offer: when what they say now matches a partner's "Use when" (e.g. looking at flats or apartments to buy → homes), call suggestPartnerOffer in the same step: one per reply, one short line; the card (shown below your words) has the fee and an adviser link, so don't also call startHandoff.
@@ -441,14 +448,35 @@ function runTool(call: ToolCall, ctx: TurnCtx): unknown {
       if (action === 'add') {
         const title = String(a.title || '').trim().slice(0, 80);
         if (!title) return { saved: false, error: 'title is required' };
-        const type = ['goal', 'life_event', 'preference', 'fact'].includes(a.type) ? a.type : 'fact';
+        let type = ['goal', 'life_event', 'preference', 'fact', 'profile'].includes(a.type) ? a.type : 'fact';
+        if (type === 'profile' && !isProfileField(a.profileField)) type = 'fact';
         const target = type === 'goal' ? targetOf(a.targetAmount, a.targetDate) : undefined;
         const draft = {
           type, title, detail: String(a.detail || '').slice(0, 200), target,
           goalType: type === 'goal' ? (a.goalType || 'other') : undefined,
+          ...(type === 'profile' ? { profileField: a.profileField } : {}),
         };
+        // About you has one answer per field: the customer's new answer replaces their old one in place
+        // (its history keeps the old one), and a Nordea guess it contradicts is marked wrong.
+        if (type === 'profile' && !sensitive) {
+          const same = db.getCabinetEntries(ctx.userId).filter((e) => e.type === 'profile' && e.profileField === a.profileField && e.status !== 'archived' && e.status !== 'disputed');
+          const mine = same.find((e) => originOf(e) === 'you');
+          if (mine) {
+            if (mine.title.toLowerCase() === title.toLowerCase()) return { saved: false, alreadyKnown: true, entryId: mine.id, note: 'Already in About you. Say so briefly.' };
+            const prev = { ...mine };
+            db.updateCabinetEntry(mine.id, { title, detail: draft.detail, confirmedAt: new Date().toISOString() }, { by: 'abel', how: 'From your chat' });
+            const undoToken = recordUndo({ userId: ctx.userId, action: 'update', description: `Updated "${prev.title}"`, previousEntry: prev, entryId: mine.id });
+            ctx.notes.push({ text: `📌 Updated in About you: ${title}`, undoToken, entryId: mine.id });
+            ctx.allowedIds.add(mine.id);
+            ctx.extraUsed.push(mine.id);
+            ctx.changes++;
+            return { saved: true, updated: true, entryId: mine.id, note: `About you updated (was "${prev.title}"). Mention it in a few words.` };
+          }
+          for (const g of same) db.updateCabinetEntry(g.id, { status: 'disputed' }, { by: 'abel', how: 'You told Abel something different' });
+        }
         // Duplicate / contradiction check in code: never two copies of the same thing, never silently overwrite.
-        const twin = findSimilar(ctx.userId, draft);
+        // (About you is handled above: one answer per field, so it never needs the similar-check.)
+        const twin = type === 'profile' ? undefined : findSimilar(ctx.userId, draft);
         if (twin) {
           const how = compare(twin, draft);
           if (how === 'same') return { saved: false, alreadyKnown: true, entryId: twin.id, note: `Already known as "${twin.title}". Nothing new was saved. Say so briefly.` };
@@ -465,6 +493,7 @@ function runTool(call: ToolCall, ctx: TurnCtx): unknown {
           id: newId('entry'), userId: ctx.userId, type: draft.type as any, title: draft.title, detail: draft.detail,
           source: 'customer', status: 'active', private: false, readableBy: { abel: true, offers: false },
           provenance: { channel: 'app' }, target: draft.target, goalType: draft.goalType as any, reviewed: true,
+          ...(type === 'profile' ? { profileField: a.profileField } : {}),
           confirmedAt: now, createdAt: now, updatedAt: now,
         };
         db.addCabinetEntry(entry, { by: 'abel', how: 'From your chat' });

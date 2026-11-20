@@ -211,5 +211,145 @@
   "goalType": "travel",
   "createdAt": "2026-04-20T10:00:00.000Z",
   "updatedAt": "2026-04-20T10:00:00.000Z"
+ },
+ {
+  "id": "lauri-prof-basics",
+  "userId": "lauri",
+  "type": "profile",
+  "profileField": "basics",
+  "title": "31, lives in Helsinki",
+  "detail": "Age and home municipality",
+  "source": "nordea",
+  "status": "active",
+  "private": false,
+  "readableBy": {
+   "abel": true,
+   "offers": false
+  },
+  "provenance": {
+   "channel": "register",
+   "register": "Finland’s Population Information System"
+  },
+  "why": "Copied when you became a customer and checked once a year.",
+  "reviewed": true,
+  "createdAt": "2026-01-10T09:00:00.000Z",
+  "updatedAt": "2026-01-10T09:00:00.000Z",
+  "confirmedAt": "2026-01-10T09:00:00.000Z"
+ },
+ {
+  "id": "lauri-prof-work",
+  "userId": "lauri",
+  "type": "profile",
+  "profileField": "life_situation",
+  "title": "Working full-time",
+  "detail": "Same employer for over four years",
+  "source": "nordea",
+  "status": "active",
+  "private": false,
+  "readableBy": {
+   "abel": true,
+   "offers": false
+  },
+  "provenance": {
+   "channel": "system",
+   "detectedFrom": "transactions"
+  },
+  "why": "A salary from the same employer has arrived on the 25th of every month since 2022.",
+  "reviewed": true,
+  "createdAt": "2026-02-01T09:00:00.000Z",
+  "updatedAt": "2026-02-01T09:00:00.000Z",
+  "confirmedAt": "2026-02-01T09:00:00.000Z"
+ },
+ {
+  "id": "lauri-prof-household",
+  "userId": "lauri",
+  "type": "profile",
+  "profileField": "household",
+  "title": "Lives with my partner Mia",
+  "detail": "We’re planning to buy a flat together",
+  "source": "customer",
+  "status": "active",
+  "private": false,
+  "readableBy": {
+   "abel": true,
+   "offers": false
+  },
+  "provenance": {
+   "channel": "app"
+  },
+  "reviewed": true,
+  "createdAt": "2026-03-14T18:20:00.000Z",
+  "updatedAt": "2026-03-14T18:20:00.000Z"
+ },
+ {
+  "id": "lauri-prof-housing",
+  "userId": "lauri",
+  "type": "profile",
+  "profileField": "housing",
+  "title": "Renting",
+  "detail": "About 1 150 € a month",
+  "source": "nordea",
+  "status": "active",
+  "private": false,
+  "readableBy": {
+   "abel": true,
+   "offers": false
+  },
+  "provenance": {
+   "channel": "system",
+   "detectedFrom": "transactions"
+  },
+  "why": "A payment of 1 150 € marked “Rent & Housing charge” goes out on the 1st of every month.",
+  "reviewed": false,
+  "createdAt": "2026-10-02T08:00:00.000Z",
+  "updatedAt": "2026-10-02T08:00:00.000Z"
+ },
+ {
+  "id": "lauri-prof-income",
+  "userId": "lauri",
+  "type": "profile",
+  "profileField": "income",
+  "title": "Steady monthly salary",
+  "detail": "3 900 € a month after the raise in May 2026",
+  "source": "nordea",
+  "status": "active",
+  "private": false,
+  "readableBy": {
+   "abel": true,
+   "offers": false
+  },
+  "provenance": {
+   "channel": "system",
+   "detectedFrom": "transactions"
+  },
+  "why": "Your salary has arrived on the same day every month; it went from 3 400 € to 3 900 € in May 2026.",
+  "reviewed": true,
+  "createdAt": "2026-06-01T09:00:00.000Z",
+  "updatedAt": "2026-06-01T09:00:00.000Z",
+  "confirmedAt": "2026-06-01T09:00:00.000Z"
+ },
+ {
+  "id": "eeva-prof-basics",
+  "userId": "eeva",
+  "type": "profile",
+  "profileField": "basics",
+  "title": "72, lives in Tampere",
+  "detail": "Age and home municipality",
+  "source": "nordea",
+  "status": "active",
+  "private": false,
+  "readableBy": {
+   "abel": true,
+   "offers": false
+  },
+  "provenance": {
+   "channel": "register",
+   "register": "Finland’s Population Information System"
+  },
+  "why": "Copied when you became a customer and checked once a year.",
+  "reviewed": true,
+  "createdAt": "2025-06-01T09:00:00.000Z",
+  "updatedAt": "2025-06-01T09:00:00.000Z",
+  "confirmedAt": "2025-06-01T09:00:00.000Z"
  }
 ]

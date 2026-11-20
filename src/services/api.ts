@@ -60,7 +60,7 @@ export async function fetchCabinetEntries(userId: string, agentId?: string): Pro
 }
 
 export async function createCabinetEntry(
-  entry: Partial<CabinetEntry> & { userId: string; title: string }
+  entry: Partial<CabinetEntry> & { userId: string; title: string; /** Where it was added, for the history ("Onboarding with Abel"). */ how?: string }
 ): Promise<{ entry: CabinetEntry; undoToken: string; message: string }> {
   const res = await fetch('/api/cabinet', {
     method: 'POST',

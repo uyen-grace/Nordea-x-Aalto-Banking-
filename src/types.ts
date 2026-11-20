@@ -30,7 +30,9 @@ export interface User {
   points: number;
 }
 
-export type CabinetEntryType = 'goal' | 'life_event' | 'preference' | 'fact' | 'observation' | 'blind_spot';
+export type CabinetEntryType = 'goal' | 'life_event' | 'preference' | 'fact' | 'observation' | 'blind_spot' | 'profile';
+/** The "About you" profile: one entry per field (see src/profileFields.ts). */
+export type ProfileField = 'basics' | 'life_situation' | 'household' | 'housing' | 'income' | 'ambition' | 'risk';
 export type CabinetEntrySource = 'customer' | 'nordea' | 'document';
 export type CabinetEntryStatus = 'active' | 'stale' | 'archived' | 'disputed';
 
@@ -50,7 +52,9 @@ export interface CabinetEntry {
   };
   provenance: {
     /** v20: also where a pipeline input came from (smart glasses, a document, a personal-AI cloud). */
-    channel: 'app' | 'whatsapp' | 'staff' | 'system' | 'glasses' | 'document' | 'cloud';
+    channel: 'app' | 'whatsapp' | 'staff' | 'system' | 'glasses' | 'document' | 'cloud' | 'register';
+    /** For channel 'register': which public register it came from, in plain words. */
+    register?: string;
     documentId?: string;
     page?: number;
     messageId?: string;
@@ -77,6 +81,8 @@ export interface CabinetEntry {
     inputsHash?: string;
   };
   reviewed: boolean;
+  /** For type 'profile': which "About you" field this entry fills. */
+  profileField?: ProfileField;
   goalType?: 'home' | 'car' | 'travel' | 'buffer' | 'other';
   confirmedAt?: string;
   createdAt: string;

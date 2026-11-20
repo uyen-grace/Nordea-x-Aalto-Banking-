@@ -7,6 +7,8 @@ import { HELPERS, HELPER_ORDER } from '../ui/helpers.js';
 import { LOGO_WHITE } from '../constants/logos.js';
 import { BAND_BG, RoundActions, NRow, Band, NChev } from './Nordea.js';
 import { Choice } from '../ui/Choice.js';
+import { SourceBadge, WhyLine } from '../ui/Source.js';
+import { interviewFields } from '../ui/profile.js';
 
 interface Props {
   state: AppState;
@@ -21,11 +23,13 @@ interface Props {
   onWrong: (e: CabinetEntry) => void;
   onArchive: (e: CabinetEntry) => void;
   onKeep: (e: CabinetEntry) => void;
+  /** Open the "Get to know you" interview. */
+  onInterview: () => void;
 }
 
 /** Things Nordea noticed that wait for the customer, and old goals that look out of date. */
 export function feedItems(entries: CabinetEntry[]) {
-  return entries.filter((e) => (e.source === 'nordea' && !e.reviewed && e.status === 'active') || e.status === 'stale');
+  return entries.filter((e) => e.type !== 'profile' && ((e.source === 'nordea' && !e.reviewed && e.status === 'active') || e.status === 'stale'));
 }
 
 export const HomeHeader: React.FC<{ state: AppState; feedCount: number; onFrame: (w: string) => void; onAsk: () => void; onUsers: () => void; onBell: () => void }> = ({ state, feedCount, onFrame, onAsk, onUsers, onBell }) => (
@@ -76,7 +80,7 @@ export const HomePage: React.FC<Props> = (p) => {
   const card = (e: CabinetEntry) =>
     e.status === 'stale' ? (
       <div className="card" key={e.id}>
-        <span className="from you">Your goal</span>
+        <SourceBadge origin="you" label="Your goal" />
         <div>
           <h3>Is “{e.title}” still a plan?</h3>
           <p>Its date has passed and no money has been added for a long time.</p>
@@ -88,17 +92,16 @@ export const HomePage: React.FC<Props> = (p) => {
       </div>
     ) : (
       <div className="card" key={e.id}>
-        <span className="from bank">Nordea noticed</span>
+        <SourceBadge e={e} />
         <div>
           <h3>{e.title}</h3>
           <p>{e.detail.replace(/\s*Is this right\?$/, '')}</p>
+          <WhyLine e={e} />
         </div>
         <div className="btns">
           <Choice large kind="yes" label="Yes, that’s right" onClick={() => p.onConfirm(e)} />
           <Choice large kind="no" label="No, that’s wrong" onClick={() => p.onWrong(e)} />
-          {e.why && <Choice large kind="more" label={whyId === e.id ? 'Hide' : 'How do we know?'} expanded={whyId === e.id} onClick={() => setWhyId(whyId === e.id ? null : e.id)} />}
         </div>
-        {e.why && whyId === e.id && <p className="why">{e.why}</p>}
       </div>
     );
 
@@ -143,6 +146,13 @@ export const HomePage: React.FC<Props> = (p) => {
             </div>
           )}
         </div>
+
+        {interviewFields(state.entries).length > 0 && (
+          <div className="ncard iv-cta">
+            <span className="t"><b>Help Abel get to know you</b><span>{interviewFields(state.entries).length} quick questions so Abel’s answers fit your life. You approve every answer.</span></span>
+            <button className="btn small primary" onClick={p.onInterview}>Start</button>
+          </div>
+        )}
 
         {feed.length > 0 && (
           <>
