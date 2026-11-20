@@ -9,7 +9,6 @@ import { HistoryList, DocsSection } from './Pages.js';
 import { PROFILE_FIELDS, PROFILE_FIELD } from '../profileFields.js';
 import { profileEntryFor, isUnconfirmed, emptyFields, interviewFields, aboutParagraph } from '../ui/profile.js';
 import { originOf } from '../entrySource.js';
-import { tipsFor } from '../ui/personal.js';
 
 /**
  * What Abel knows: four parts, nothing else.
@@ -206,16 +205,6 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
               <span className="about-p">{paragraph}</span>
             </span>
           </div>
-          {tipsFor(state).length > 0 && (
-            <div className="nrow2 static">
-              <span className="n-l">
-                <span className="n-sub">Because of this, Abel suggests</span>
-                {tipsFor(state).map((t) => (t.ask
-                  ? <button key={t.id} className="btn link tip-link" onClick={() => p.onAsk?.(t.ask!.text)}>→ {t.title}</button>
-                  : <span key={t.id} className="tip-link">→ {t.title}</span>))}
-              </span>
-            </div>
-          )}
           {questions > 0 && (
             <div className="nrow2 static">
               <span className="n-l">

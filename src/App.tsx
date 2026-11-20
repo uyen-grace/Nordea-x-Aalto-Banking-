@@ -4,6 +4,7 @@ import { PersonaPickerModal } from './components/PersonaPickerModal.js';
 import { AddGoalModal } from './components/AddGoalModal.js';
 import { Interview } from './components/Interview.js';
 import { KnowsPage, applyDecision } from './components/Cabinet.js';
+import { tipsFor } from './ui/personal.js';
 import { HomePage } from './components/HomePage.js';
 import { PrivacyPage, AutopilotPage, RewardsPage, RedeemSheet, ContactPage, MorePage, DeleteDocSheet, ConfirmSheet } from './components/Pages.js';
 import { Chat } from './components/Chat.js';
@@ -387,6 +388,7 @@ export default function App() {
                 userId={state.user.id}
                 documents={state.documents}
                 onDeleteDoc={setDelDocId}
+                tips={tipsFor(state)}
               />
               {delDocId && state.documents.find((d) => d.id === delDocId) && (
                 <DeleteDocSheet doc={state.documents.find((d) => d.id === delDocId)!} onDelete={removeDoc} onCancel={() => setDelDocId(null)} />

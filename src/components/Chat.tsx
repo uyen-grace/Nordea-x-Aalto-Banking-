@@ -5,6 +5,7 @@ import { eur, eurP, dayMonth, monthShort } from '../ui/format.js';
 import { HELPERS } from '../ui/helpers.js';
 import { Choice } from '../ui/Choice.js';
 import { originOf } from '../entrySource.js';
+import type { Tip } from '../ui/personal.js';
 import { documentUrl } from '../services/api.js';
 import type { ImportBody, DocInfo } from '../services/api.js';
 
@@ -60,6 +61,9 @@ interface Props {
   userId: string;
   documents: DocInfo[];
   onDeleteDoc: (id: string) => void;
+  /** What Abel would suggest from About you and the rest of What Abel knows (src/ui/personal.ts).
+   *  A new chat with Abel opens with these, as one-tap questions. */
+  tips?: Tip[];
 }
 
 /** "15 000 €" never splits over two lines in a bubble. */
@@ -418,7 +422,26 @@ export const Chat: React.FC<Props> = (p) => {
   // Build the list of bubbles (grouped like a messenger).
   const items: Item[] = [];
   const [g1, g2] = h.greet(p.userName);
-  items.push({ who: 'bot', key: 'g1' + p.helperId, node: g1 }, { who: 'bot', key: 'g2' + p.helperId, node: g2 });
+  // A new chat with Abel starts from what he knows about you: a short list of what he'd look at first.
+  const tips = p.helperId === 'abel' ? (p.tips || []).slice(0, 3) : [];
+  if (tips.length) {
+    items.push(
+      { who: 'bot', key: 'g1' + p.helperId, node: g1 },
+      { who: 'bot', key: 'gt' + p.helperId, node: (
+        <span className="tip-open">
+          From what I know about you, I’d look at:
+          {tips.map((t) => (
+            <span className="tip-line" key={t.id}>
+              <b>{t.title}</b>
+              <span className={`from ${t.from}`}>{t.because}</span>
+            </span>
+          ))}
+        </span>
+      ) },
+    );
+  } else {
+    items.push({ who: 'bot', key: 'g1' + p.helperId, node: g1 }, { who: 'bot', key: 'g2' + p.helperId, node: g2 });
+  }
   const latestAgentId = [...p.messages].reverse().find((m) => m.sender === 'agent' && (m.supplied || m.usedEntryIds?.length))?.id;
   p.messages.forEach((m) => {
     if (m.sender === 'user') {
@@ -481,8 +504,13 @@ export const Chat: React.FC<Props> = (p) => {
   });
 
   const last = p.messages[p.messages.length - 1];
-  const pills = !p.waiting && last && last.sender === 'agent' && !last.resolved && last.suggestions?.length ? last.suggestions : !p.messages.length ? h.chips.map((c) => c[1]) : null;
-  const pillLabel = (s: string) => (!p.messages.length ? h.chips.find((c) => c[1] === s)?.[0] || s : s);
+  // Opening chips: Abel's suggestions from what he knows first, then the usual ones (at most four).
+  const openChips: [string, string][] = [
+    ...tips.filter((t) => t.ask).map((t) => [t.ask!.label, t.ask!.text] as [string, string]),
+    ...h.chips,
+  ].filter((c, i, a) => a.findIndex((x) => x[1] === c[1]) === i).slice(0, 4);
+  const pills = !p.waiting && last && last.sender === 'agent' && !last.resolved && last.suggestions?.length ? last.suggestions : !p.messages.length ? openChips.map((c) => c[1]) : null;
+  const pillLabel = (s: string) => (!p.messages.length ? openChips.find((c) => c[1] === s)?.[0] || s : s);
 
   return (
     <section className={`chat ${h.cls}`} role="dialog" aria-label={`Chat with ${h.name}`}>

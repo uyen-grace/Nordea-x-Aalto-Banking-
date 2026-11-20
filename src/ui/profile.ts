@@ -30,14 +30,18 @@ export const emptyFields = (entries: CabinetEntry[]): ProfileField[] =>
 /** About you as one short paragraph, like Claude's memory: "Lauri, 31, lives in Helsinki. Works full-time. …"
  *  Only what Abel may use: the customer's own answers and what they confirmed. */
 export function aboutParagraph(name: string, entries: CabinetEntry[], age?: number): string {
+  const val = (f: ProfileField) => {
+    const e = profileEntryFor(entries, f);
+    return e && !isUnconfirmed(e) ? e.title.trim().replace(/[.!]+$/, '') : '';
+  };
+  const low = (s: string) => (s && !/^[A-ZÅÄÖ]{2}/.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s);
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-  const parts = PROFILE_FIELDS.map((f) => {
-    const e = profileEntryFor(entries, f.key);
-    if (!e || isUnconfirmed(e)) return '';
-    const t = e.title.trim().replace(/[.!]+$/, '');
-    return f.key === 'basics' ? `${name}, ${t}.` : `${cap(t)}.`;
-  });
+  // Short: related facts share one sentence. "Lauri, 31. Works, steady salary. Lives with a partner, rents. …"
+  const sentence = (...fs: ProfileField[]) => {
+    const vs = fs.map(val).filter(Boolean);
+    return vs.length ? `${cap(vs[0])}${vs.slice(1).map((v) => `, ${low(v)}`).join('')}.` : '';
+  };
   // No basics entry yet: start with what Nordea always knows - the name and age on the account.
-  if (!parts[0]) parts[0] = age ? `${name}, ${age}.` : `${name}.`;
-  return parts.filter(Boolean).join(' ');
+  const first = val('basics') ? `${name}, ${val('basics')}.` : age ? `${name}, ${age}.` : `${name}.`;
+  return [first, sentence('life_situation', 'income'), sentence('household', 'housing'), sentence('ambition', 'risk')].filter(Boolean).join(' ');
 }
