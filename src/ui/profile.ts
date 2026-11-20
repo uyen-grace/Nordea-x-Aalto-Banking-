@@ -16,16 +16,21 @@ export const isUnconfirmed = (e?: CabinetEntry) => !!e && originOf(e) !== 'you' 
 
 /** What the onboarding interview should ask about, most useful first, at most `max`:
  *  empty fields first, then Nordea's guesses that still need a yes or a correction. */
-export function interviewFields(entries: CabinetEntry[], max = 5): ProfileField[] {
-  const askable = PROFILE_FIELDS.filter((f) => f.question && !f.optional);
+export function interviewFields(entries: CabinetEntry[], max = 5, covered: string[] = []): ProfileField[] {
+  // Nordea already knows some fields from the account data (covered): no need to ask those.
+  const askable = PROFILE_FIELDS.filter((f) => f.question && !f.optional && !covered.includes(f.key));
   const empty = askable.filter((f) => !profileEntryFor(entries, f.key)).map((f) => f.key);
   const toConfirm = askable.filter((f) => isUnconfirmed(profileEntryFor(entries, f.key))).map((f) => f.key);
   return [...empty, ...toConfirm].slice(0, max);
 }
 
 /** Fields nobody has filled yet (Nordea's unconfirmed guesses don't count as empty: they wait for a yes). */
-export const emptyFields = (entries: CabinetEntry[]): ProfileField[] =>
-  PROFILE_FIELDS.filter((f) => f.question && !f.optional && !profileEntryFor(entries, f.key)).map((f) => f.key);
+export const emptyFields = (entries: CabinetEntry[], covered: string[] = []): ProfileField[] =>
+  PROFILE_FIELDS.filter((f) => f.question && !f.optional && !covered.includes(f.key) && !profileEntryFor(entries, f.key)).map((f) => f.key);
+
+/** The profile fields Nordea's data already answers (from the server's About you). */
+export const coveredFields = (about?: { facts: { key: string; from: string }[] }): string[] =>
+  (about?.facts || []).filter((f) => f.from === 'nordea').map((f) => f.key);
 
 /** About you as one short paragraph, like Claude's memory: "Lauri, 31, lives in Helsinki. Works full-time. …"
  *  Only what Abel may use: the customer's own answers and what they confirmed. */

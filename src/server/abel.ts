@@ -21,7 +21,7 @@ import { getProvider, ToolDecl, ToolCall, Turn, lastErrorText, recordTurn, isBus
 import { CabinetEntry, ChatMessage, MessageCard, UndoRecord } from '../types.js';
 import { originOf, ORIGIN_SAY } from '../entrySource.js';
 import { PROFILE_FIELDS, PROFILE_FIELD, isProfileField } from '../profileFields.js';
-import { aboutParagraph } from '../ui/profile.js';
+import { aboutFor } from './bankProfile.js';
 import { findSimilar, compare } from './similar.js';
 import { kvReplyIn, looksLikeCode } from './replyParse.js';
 import { offlineAnswer } from './abelOffline.js';
@@ -200,8 +200,8 @@ function systemPrompt(userId: string, helperId: string, cabinet: CabinetEntry[],
 Customer: ${u.name}, ${u.age}. Today is ${fin.DEMO_TODAY}. View: ${calm ? 'CALM (older or data-careful customer)' : 'full'}.
 This chat is with the helper: ${helperId}. Focus: ${HELPER_FOCUS[helperId] || HELPER_FOCUS.abel}
 
-ABOUT THE CUSTOMER (their "About you", only what they told you or confirmed; let it shape every answer, and say so when it matters, e.g. "since you want to keep your savings safe…"):
-${aboutParagraph(u.name, cabinet, u.age)}
+ABOUT THE CUSTOMER (their "About you": what Nordea knows from their accounts and what they told you; let it shape every answer, and say where it comes from when it matters, e.g. "since you want to keep your savings safe…", "Nordea can see your rent is…"):
+${aboutFor(userId, cabinet).text}
 
 FACTS (computed by the bank's code just now; use these numbers directly, no tool call needed):
 ${JSON.stringify(facts)}
@@ -229,7 +229,7 @@ HOW YOU TALK
 RULES
 - Numbers only from FACTS, the cabinet, this chat or a tool result, or simple maths on them (show the sum briefly). In goals, monthlyGoingIn is what goes in now; extraPerMonthNeeded is what's missing on top. FACTS cover balances, salary, 3-month spending, goals and the payday plan; call a tool only for anything else (another period, whether an amount is affordable).
 - One step: finishReply, plus any action tool in the same step.
-- Save meaningful context quietly with proposeCabinetChange (goals with amount/date, life events, preferences, facts); never small talk or complaints. When they tell you something about who they are (started studying, moved in with someone, now own a home, new job), save it as type "profile" with its profileField: it replaces that About you field. Remove by name: action "archive" with its entryId (up to 3). Never "delete everything": point to "Abel knows".
+- Save meaningful context quietly with proposeCabinetChange (goals with amount/date, life events, preferences, facts); never small talk or complaints. What they say about themselves (studies, partner, home, plans, risk) is already saved to About you automatically - don't save it again; use proposeCabinetChange for goals with an amount and date, and changes or removals they ask for. Remove by name: action "archive" with its entryId (up to 3). Never "delete everything": point to "Abel knows".
 - Sensitive (health, pregnancy, mental health, relationship problems): sensitive=true; it isn't saved unless the customer taps, so never say you saved or noted it. A wedding or honeymoon is not sensitive.
 - Passed goal dates: ask if still a plan.
 - Partner offer: when what they say now matches a partner's "Use when" (e.g. looking at flats or apartments to buy → homes), call suggestPartnerOffer in the same step: one per reply, one short line; the card (shown below your words) has the fee and an adviser link, so don't also call startHandoff.

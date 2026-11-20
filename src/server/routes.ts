@@ -20,7 +20,8 @@ import { keepDocument, readDocument, deleteDocument, sweepExpired, KEEP_DAYS } f
 import { XLSX_MIME, csvText } from './fileText.js';
 import { runSelfTest } from './selftest.js';
 import { pipelineStorage, hydratePipeline } from './pipeline/store.js';
-import { ensureDerivedProfile } from './profileDerive.js';
+import { aboutFor } from './bankProfile.js';
+import { rememberFromChat } from './chatMemory.js';
 
 const fmt = (n: number, d = 0) =>
   Number(n).toLocaleString('fi-FI', { minimumFractionDigits: d, maximumFractionDigits: d }).replace(/−/g, '−') + ' €';
@@ -81,8 +82,6 @@ export function registerV14Routes(app: Express) {
     }
     const user = db.getUser(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
-    // About you starts with what Nordea already knows (salary, rent), so it's never empty.
-    try { ensureDerivedProfile(userId); } catch (e) { console.error('Could not fill About you from Nordea data:', e); }
     const entries = db.getCabinetEntries(userId);
     const goals = fin.activeGoals(userId).map((g) => fin.goalStatus(userId, g));
     const spentThisMonth = Object.values(fin.monthSpend(userId, fin.CUR_MONTH)).reduce((a, b) => a + b, 0);
@@ -97,9 +96,13 @@ export function registerV14Routes(app: Express) {
       })
       .filter((c) => c.count > 0)
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    // About you: worked out live from Nordea's data plus what they said (never empty).
+    let about: ReturnType<typeof aboutFor> = { text: '', facts: [] };
+    try { about = aboutFor(userId, entries.filter((e) => e.status === 'active')); } catch (e) { console.error('About you failed:', e); }
     res.json({
       user,
       entries,
+      about,
       accounts: fin.accounts(userId),
       goals,
       salary: fin.salaryInfo(userId),
@@ -160,6 +163,9 @@ export function registerV14Routes(app: Express) {
     if (!conv || conv.userId !== userId) conv = newConversation(userId, helperId);
     const u = userMsg(userId, conv.id, conv.helperId, text.slice(0, 2000));
     if (requestId) { u.requestId = requestId; db.updateMessage(u.id, { requestId }); }
+    // What they say about themselves goes to About you first, so Abel already knows it when he answers.
+    let remembered: ReturnType<typeof rememberFromChat> = [];
+    try { remembered = rememberFromChat(userId, u.text); } catch (e) { console.error('Could not save to About you:', e); }
     // His three agents gather what Abel may see for this conversation (User DB via the personal agent,
     // the session's finalised context.md); Abel writes the reply, with cards and the reply checks.
     const shared = await abelSharedContext(userId, conv.id, u.text);
@@ -168,7 +174,7 @@ export function registerV14Routes(app: Express) {
     const a = agentMsg(userId, conv.id, conv.helperId, reply.text, {
       suggestions: reply.suggestions,
       cards: reply.cards,
-      notes: reply.notes,
+      notes: [...remembered, ...(reply.notes || [])],
       usedEntryIds: reply.usedEntryIds,
       supplied: { ...(reply.supplied || { notes: 0, accountData: true }), source: reply.offline ? 'scripted' : 'model', category: classifyQuestion(u.text, shared.sharedContext ? [shared.sharedContext] : []), ...(shared.sharedContext ? { shared: true } : {}) },
       errorInfo: reply.errorDetail,

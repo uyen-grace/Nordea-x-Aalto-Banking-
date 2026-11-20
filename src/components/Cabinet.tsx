@@ -7,7 +7,7 @@ import { eur, monthShort, n0 } from '../ui/format.js';
 import { BAND_BG, Band, RoundActions } from './Nordea.js';
 import { HistoryList, DocsSection } from './Pages.js';
 import { PROFILE_FIELDS, PROFILE_FIELD } from '../profileFields.js';
-import { profileEntryFor, isUnconfirmed, emptyFields, interviewFields, aboutParagraph } from '../ui/profile.js';
+import { profileEntryFor, isUnconfirmed, emptyFields, interviewFields, aboutParagraph, coveredFields } from '../ui/profile.js';
 import { originOf } from '../entrySource.js';
 
 /**
@@ -156,9 +156,11 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
   const nordea = live.filter((e) => fromNordea(e) && e.reviewed && e.type !== 'profile' && e.status === 'active');
   const old = state.entries.filter((e) => e.status === 'archived' || e.status === 'disputed');
   // About you
-  const paragraph = aboutParagraph(name, state.entries, state.user.age);
-  const missing = emptyFields(state.entries).length;
-  const questions = interviewFields(state.entries).length;
+  // Worked out on the server from Nordea's data + what they said; the local version is only a fallback.
+  const paragraph = state.about?.text || aboutParagraph(name, state.entries, state.user.age);
+  const covered = coveredFields(state.about);
+  const missing = emptyFields(state.entries, covered).length;
+  const questions = interviewFields(state.entries, 5, covered).length;
   const aboutRef = React.useRef<HTMLDivElement>(null);
   const [flash, setFlash] = useState(false);
   useEffect(() => {
@@ -208,44 +210,48 @@ export const KnowsPage: React.FC<KnowsProps> = (p) => {
           <div className="nrow2 static">
             <span className="wait-act about-btns">
               <button className="btn small primary" onClick={() => p.onInterview()}>
-                <Icon name="plus" size={16} />{questions > 0 ? `Add more · ${questions} quick ${questions === 1 ? 'question' : 'questions'}` : 'Add more'}
+                <Icon name="plus" size={16} />{questions > 0 ? `Add more · ${questions + 1} quick questions` : 'Add more'}
               </button>
               <button className="btn small" aria-expanded={aboutOpen} onClick={() => setAboutOpen(!aboutOpen)}>
                 {aboutOpen ? 'Done' : 'Edit'}
               </button>
             </span>
           </div>
-          {aboutOpen && PROFILE_FIELDS.map((f) => {
-            const e = profileEntryFor(state.entries, f.key);
-            const shown = e && !isUnconfirmed(e) ? e : undefined;
+          {aboutOpen && (() => {
+            // Every fact behind the paragraph, with who it came from; then what's still open to add.
+            const facts = state.about?.facts || [];
+            const open = PROFILE_FIELDS.filter((f) => f.question && !f.optional && !facts.some((x) => x.key === f.key));
             return (
-              <div className="nrow2 static" key={f.key}>
-                <span className="n-l">
-                  <span className="n-sub">{f.label}</span>
-                  {shown ? (
-                    <>
-                      <span className="n-name">{shown.title}</span>
-                      <From e={shown} />
-                    </>
-                  ) : f.key === 'basics' && state.user.age ? (
-                    // Nordea always knows the age on the account.
-                    <>
-                      <span className="n-name">{state.user.age} years old</span>
-                      <span className="from bank">Nordea noticed this</span>
-                    </>
-                  ) : (
-                    <span className="n-name"><span className="cab-unset">Not set</span></span>
-                  )}
-                </span>
-                {f.question && (
-                  <span className="about-row-act">
-                    <button className="btn link" onClick={() => p.onInterview(f.key)}>{shown ? 'Change' : 'Add'}</button>
-                    {shown && <button className="btn link quiet-link" onClick={() => apply(shown, 'delete')}>Delete</button>}
-                  </span>
-                )}
-              </div>
+              <>
+                {facts.map((f, i) => {
+                  const entry = f.entryId ? state.entries.find((e) => e.id === f.entryId) : undefined;
+                  const askable = PROFILE_FIELD[f.key as ProfileField]?.question;
+                  return (
+                    <div className="nrow2 static" key={`${f.key}-${i}`}>
+                      <span className="n-l">
+                        <span className="n-sub">{f.label}</span>
+                        <span className="n-name">{f.text.charAt(0).toUpperCase() + f.text.slice(1)}</span>
+                        <span className={`from ${f.from === 'you' ? 'you' : 'bank'}`}>{f.from === 'you' ? 'You set this' : 'Nordea noticed this'}</span>
+                      </span>
+                      <span className="about-row-act">
+                        {askable && <button className="btn link" onClick={() => p.onInterview(f.key as ProfileField)}>Change</button>}
+                        {entry && <button className="btn link quiet-link" onClick={() => apply(entry, 'delete')}>Delete</button>}
+                      </span>
+                    </div>
+                  );
+                })}
+                {open.map((f) => (
+                  <div className="nrow2 static" key={f.key}>
+                    <span className="n-l">
+                      <span className="n-sub">{f.label}</span>
+                      <span className="n-name"><span className="cab-unset">Not set</span></span>
+                    </span>
+                    <button className="btn link" onClick={() => p.onInterview(f.key)}>Add</button>
+                  </div>
+                ))}
+              </>
             );
-          })}
+          })()}
         </div>
 
         {/* ---------- Waiting for you ---------- */}

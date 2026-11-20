@@ -121,7 +121,7 @@ export function tipsFor(state: AppState): Tip[] {
   }
 
   // 4. Keep savings safe -> only safe suggestions.
-  const safe = live.find((e) => (e.type === 'profile' && e.profileField === 'risk' && /safe/i.test(e.title)) || (e.type === 'preference' && /low-risk|safe/i.test(e.title)));
+  const safe = live.find((e) => (e.type === 'profile' && e.profileField === 'risk' && /safe|(n[o’']t|never)\b.*\brisk/i.test(e.title)) || (e.type === 'preference' && /low-risk|safe/i.test(e.title)));
   if (safe) {
     tips.push({
       id: 'tip-safe', from: 'you', entryId: safe.id,

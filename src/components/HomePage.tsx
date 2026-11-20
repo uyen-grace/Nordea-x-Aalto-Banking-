@@ -7,7 +7,7 @@ import { HELPERS, HELPER_ORDER } from '../ui/helpers.js';
 import { LOGO_WHITE } from '../constants/logos.js';
 import { BAND_BG, RoundActions, NRow, Band, NChev } from './Nordea.js';
 import { Decide, Decision } from '../ui/Decide.js';
-import { interviewFields } from '../ui/profile.js';
+import { interviewFields, coveredFields } from '../ui/profile.js';
 import { tipsFor } from '../ui/personal.js';
 
 interface Props {
@@ -144,9 +144,9 @@ export const HomePage: React.FC<Props> = (p) => {
           )}
         </div>
 
-        {interviewFields(state.entries).length > 0 && (
+        {interviewFields(state.entries, 5, coveredFields(state.about)).length > 0 && (
           <div className="ncard iv-cta">
-            <span className="t"><b>Help Abel get to know you</b><span>{interviewFields(state.entries).length} quick questions</span></span>
+            <span className="t"><b>Help Abel get to know you</b><span>{interviewFields(state.entries, 5, coveredFields(state.about)).length + 1} quick questions</span></span>
             <button className="btn small primary" onClick={p.onInterview}>Start</button>
           </div>
         )}

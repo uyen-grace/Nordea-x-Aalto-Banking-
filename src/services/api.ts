@@ -169,8 +169,11 @@ export interface GoalStatus {
   goalId: string; title: string; target: number; targetDate: string; saved: number; monthlyGoingIn: number;
   monthsLeft: number; projectedByTargetDate: number; shortBy: number; onTrack: boolean; extraPerMonthNeeded: number; percentSaved: number;
 }
+/** About you, worked out on the server from Nordea's data and what the customer said (src/server/bankProfile.ts). */
+export interface AboutFact { key: string; label: string; text: string; from: 'you' | 'nordea'; why?: string; entryId?: string }
 export interface AppState {
   user: User;
+  about?: { text: string; facts: AboutFact[] };
   /** v21: a Nordea adviser's question or decision about a case (shown on Home). */
   notices?: { id: string; conversationId: string; kind: 'question' | 'decision'; by: string; text: string; at: string }[];
   entries: CabinetEntry[];

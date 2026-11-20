@@ -43,11 +43,13 @@ export const Interview: React.FC<{
   entries: CabinetEntry[];
   /** Ask about one field only (Edit in About you). */
   only?: ProfileField;
+  /** Fields Nordea already knows from the account data: not asked. */
+  covered?: string[];
   onClose: () => void;
   onSaved: (message: string) => void;
-}> = ({ userId, userName, entries, only, onClose, onSaved }) => {
+}> = ({ userId, userName, entries, only, covered = [], onClose, onSaved }) => {
   // Missing answers first, then always the open question "Anything else?" (skip is fine).
-  const [fields] = useState<ProfileField[]>(() => (only ? [only] : [...interviewFields(entries), 'more']));
+  const [fields] = useState<ProfileField[]>(() => (only ? [only] : [...interviewFields(entries, 5, covered), 'more']));
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [typed, setTyped] = useState('');
