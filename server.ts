@@ -11,6 +11,7 @@ import { isProfileField } from './src/profileFields.js';
 import { failClosedRoutes } from './src/server/failClosedRoutes.js';
 import { customerIdRejection } from './src/server/customerId.js';
 import { registerV14Routes } from './src/server/routes.js';
+import { registerCabinetExtraRoutes } from './src/server/cabinetExtras.js';
 import { registerDevMonitor } from './src/server/devMonitor.js';
 import { registerArchRoutes } from './src/server/arch/routes.js';
 import { startFeedWatcher } from './src/server/nordeaFeed.js';
@@ -347,6 +348,8 @@ app.get('/api/transactions', (req, res) => {
 
 // 9. Chat, button actions and everything new in v14 live in routes.ts
 registerV14Routes(app);
+// What Abel knows: sources the customer allows, automatic updates with Undo.
+registerCabinetExtraRoutes(app);
 
 // Read-only developer monitoring panel (display only, no controls): /dev-monitor.html
 registerDevMonitor(app);

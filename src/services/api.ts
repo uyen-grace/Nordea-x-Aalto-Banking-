@@ -325,3 +325,17 @@ export const decidePipelineItem = (userId: string, id: string, action: 'save' | 
   post(`/api/pipeline/${encodeURIComponent(userId)}/items/${encodeURIComponent(id)}`, { action }).then((r) => j<{ item: PipeItem }>(r));
 export const sendToPipeline = (userId: string, source: PipeSource, input: { signals?: { text: string; kind?: string }[]; text?: string; file?: { mimeType: string; data: string; name?: string }; label?: string }) =>
   post('/api/ingest', { userId, source, ...input }).then((r) => j<{ run: PipeRun; candidates: PipeItem[]; message?: string }>(r));
+
+// ---- What Abel knows: sources and automatic updates (src/server/cabinetExtras.ts) ----
+export type SourceId = 'nordea' | 'register' | 'chats' | 'assistant';
+export interface AutoUpdate { id: string; entryId: string; at: string; action: string; title: string; how: string; from: 'bank' | 'payslip'; undone: boolean }
+export const fetchSources = (userId: string) =>
+  fetch(`/api/sources?userId=${encodeURIComponent(userId)}`).then((r) => j<{ sources: Record<SourceId, boolean>; working: SourceId[] }>(r));
+export const setSource = (userId: string, source: SourceId, on: boolean) =>
+  post('/api/sources', { userId, source, on }).then((r) => j<{ sources: Record<SourceId, boolean>; working: SourceId[] }>(r));
+export const fetchAutoUpdates = (userId: string) =>
+  fetch(`/api/cabinet/recent?userId=${encodeURIComponent(userId)}`).then((r) => j<{ updates: AutoUpdate[] }>(r)).then((d) => d.updates);
+export const undoAutoUpdate = (userId: string, id: string) =>
+  post('/api/cabinet/recent/undo', { userId, id }).then((r) => j<{ updates: AutoUpdate[] }>(r)).then((d) => d.updates);
+export const demoNewData = (userId: string) =>
+  post('/api/cabinet/demo/new-data', { userId }).then((r) => j<{ updates: AutoUpdate[]; added: string[] }>(r));

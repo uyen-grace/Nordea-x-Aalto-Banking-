@@ -23,8 +23,8 @@ export function originOf(e: Pick<CabinetEntry, 'type' | 'source' | 'provenance'>
 /** Short badge text. */
 export const ORIGIN_LABEL: Record<Origin, string> = {
   you: 'You set this',
-  nordea: 'Nordea noticed this',
-  register: 'From a public register',
+  nordea: 'From your bank data',
+  register: 'From the population register',
   document: 'From your document',
   hidden: 'Not shared with Abel',
 };

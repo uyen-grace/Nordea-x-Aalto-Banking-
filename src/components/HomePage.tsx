@@ -6,7 +6,9 @@ import { nfi, ago } from '../ui/format.js';
 import { HELPERS, HELPER_ORDER } from '../ui/helpers.js';
 import { LOGO_WHITE } from '../constants/logos.js';
 import { BAND_BG, RoundActions, NRow, Band, NChev } from './Nordea.js';
-import { Decide, Decision } from '../ui/Decide.js';
+import { Decision } from '../ui/Decide.js';
+import { Choice, Choices } from '../ui/Choice.js';
+import { SourceBadge } from '../ui/SourceBadge.js';
 import { interviewFields, coveredFields } from '../ui/profile.js';
 import { tipsFor } from '../ui/personal.js';
 
@@ -84,21 +86,27 @@ export const HomePage: React.FC<Props> = (p) => {
   const card = (e: CabinetEntry) =>
     e.status === 'stale' ? (
       <div className="card" key={e.id}>
-        <span className="from you">Your goal</span>
+        <SourceBadge e={e} />
         <div>
           <h3>Still saving for “{e.title}”?</h3>
           <p>No money added for a long time.</p>
         </div>
-        <Decide options={['keep', 'delete']} onPick={(d) => p.onDecide(e, d)} label={e.title} />
+        <Choices>
+          <Choice kind="yes" large label="Yes, keep it" onClick={() => p.onDecide(e, 'keep')} />
+          <Choice kind="archive" large label="No, remove it" onClick={() => p.onDecide(e, 'delete')} />
+        </Choices>
       </div>
     ) : (
       <div className="card" key={e.id}>
-        <span className="from bank">Nordea noticed</span>
+        <SourceBadge e={e} />
         <div>
           <h3>{e.title}</h3>
           <p>{e.detail.replace(/\s*Is this right\?$/, '')}</p>
         </div>
-        <Decide onPick={(d) => p.onDecide(e, d)} label={e.title} />
+        <Choices hint="Is this right?">
+          <Choice kind="yes" large label="Yes, that’s right" onClick={() => p.onDecide(e, 'share')} />
+          <Choice kind="no" large label="Not right" onClick={() => p.onDecide(e, 'delete')} />
+        </Choices>
       </div>
     );
 
